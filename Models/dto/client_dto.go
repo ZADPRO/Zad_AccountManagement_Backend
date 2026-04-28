@@ -14,11 +14,11 @@ type CreateClientRequest struct {
 	GSTNumber     string `json:"gstnumber"` 
 	PAN           string `json:"pan"`
 	IsExport      bool   `json:"isexport"`
-	CountryName   string `json:"countryName" binding:"required"`
+	CountryName   string `json:"countryName"`
 	StateName     string `json:"stateName"`
-	ZIP           int    `json:"zip" binding:"required"`
-	Address       string `json:"registeredAddress" binding:"required"`
-	PrimaryNumber string `json:"mobilenumber" binding:"required"`
+	ZIP           int    `json:"zip"`
+	Address       string `json:"registeredAddress"`
+	PrimaryNumber string `json:"mobilenumber"`
 	Email         string `json:"email"`
 	 
 	

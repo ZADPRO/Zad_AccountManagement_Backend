@@ -7,7 +7,9 @@ import (
 	"invoice-backend/Models/dto"
 	"invoice-backend/Models/responses"
 	"invoice-backend/Query"
-	"time"
+	"time" 
+    "strings" 
+    "strconv"
 )
 
 // GetAllClients retrieves all active clients
@@ -39,14 +41,23 @@ func GetAllClients(db *sql.DB) ([]responses.ClientListModel, error) {
 
 // CreateClient handles the business logic for adding a new client
 func CreateClient(db *sql.DB, req dto.CreateClientRequest, adminID int) (int, error) {
-    encryptedGST, err := Utils.EncryptForDB(req.GSTNumber)
-    if err != nil {
-        return 0, fmt.Errorf("GST encryption failed: %w", err)
+    var encryptedGST, encryptedPAN string
+    var err error
+
+    
+    if req.GSTNumber != "" {
+        encryptedGST, err = Utils.EncryptForDB(req.GSTNumber)
+        if err != nil {
+            return 0, fmt.Errorf("GST encryption failed: %w", err)
+        }
     }
 
-    encryptedPAN, err := Utils.EncryptForDB(req.PAN)
-    if err != nil {
-        return 0, fmt.Errorf("PAN encryption failed: %w", err)
+    // Only encrypt PAN if it's not empty
+    if req.PAN != "" {
+        encryptedPAN, err = Utils.EncryptForDB(req.PAN)
+        if err != nil {
+            return 0, fmt.Errorf("PAN encryption failed: %w", err)
+        }
     }
 
     tx, err := db.Begin()
@@ -63,19 +74,19 @@ func CreateClient(db *sql.DB, req dto.CreateClientRequest, adminID int) (int, er
     // 3. Insert into clientinformation
     var clientID int
     err = tx.QueryRow(Query.CreateClientInfoQuery,
-        req.ClientCode,    // $1
-        req.Name,          // $2
-        req.BusinessName,  // $3
-        req.SupplyTypeID,  // $4
-        req.Email,         // $5
-        req.PrimaryNumber, // $6
-        req.Address,       // $7
-        req.CountryName,   // $8
-        req.StateName,     // $9
-        req.ZIP,           // $10
-        req.ClientType,    // $11
-        adminID,           // $12
-    ).Scan(&clientID)
+	req.ClientCode,
+	req.Name,
+	req.BusinessName,
+	req.SupplyTypeID,
+	toNullString(req.Email),
+	req.PrimaryNumber,
+	toNullString(req.Address),
+	toNullString(req.CountryName),
+	toNullString(req.StateName),
+	toNullInt(req.ZIP),
+	req.ClientType,
+	adminID,
+).Scan(&clientID)
 
     if err != nil {
         return 0, fmt.Errorf("client info insert failed: %w", err)
@@ -126,16 +137,21 @@ func UpdateClient(db *sql.DB, clientID int, req dto.CreateClientRequest, adminID
     }()
 
     // 🔐 Encrypt sensitive fields
-    encryptedGST, err := Utils.EncryptForDB(req.GSTNumber)
+    var encryptedGST, encryptedPAN string
+
+if req.GSTNumber != "" {
+    encryptedGST, err = Utils.EncryptForDB(req.GSTNumber)
     if err != nil {
         return fmt.Errorf("GST encryption failed: %w", err)
     }
+}
 
-    encryptedPAN, err := Utils.EncryptForDB(req.PAN)
+if req.PAN != "" {
+    encryptedPAN, err = Utils.EncryptForDB(req.PAN)
     if err != nil {
         return fmt.Errorf("PAN encryption failed: %w", err)
     }
-
+}
     // ✅ Convert 0 → nil for optional billing state FK
     var billingStateID *int
     if req.BillingStateID != nil && *req.BillingStateID != 0 {
@@ -187,42 +203,118 @@ func GetClientByID(db *sql.DB, clientID int) (responses.ClientDetailsResponse, e
 	var updatedAt time.Time
 	var updatedBy int
 
-err := db.QueryRow(Query.GetClientByIDQuery, clientID).Scan(
-    &client.ClientID,
-    &client.ClientCode,
-    &client.Name,
-    &client.BusinessName,
-    &client.SupplyTypeID,
-    &client.IsActive,
-    &client.ClientType,
-    &updatedAt,        // correct
-    &updatedBy,        // correct
-    &client.Email,
-    &client.MobileNumber,
-    &client.RegisteredAddress,
-    &client.CountryName,
-    &client.StateName,
-    &client.ZIP,
-    &client.BillingAddress,
-    &client.BillingCountryID,
-    &client.BillingStateID,
-    &client.TaxPercentage,
-    &client.GSTNumber,
-    &client.PAN,
-    &client.IsExport,
-    &client.GSTStatus,
-    &client.BillingCountryName,
-    &client.BillingStateName,
+	// Nullable fields
+	var email, mobileNumber, registeredAddress, countryName sql.NullString
+    var stateName, billingAddress, gstNumber, pan sql.NullString
+    var billingCountryName, billingStateName, gstStatus sql.NullString
+
+    var zip sql.NullInt64
+    var billingStateID sql.NullInt64
+    var billingCountryID sql.NullInt64
+
+	err := db.QueryRow(Query.GetClientByIDQuery, clientID).Scan(
+	&client.ClientID,
+	&client.ClientCode,
+	&client.Name,
+	&client.BusinessName,
+	&client.SupplyTypeID,
+	&client.IsActive,
+	&client.ClientType,
+	&updatedAt,
+	&updatedBy,
+	&email,
+	&mobileNumber,
+	&registeredAddress,
+	&countryName,
+	&stateName,
+	&zip,
+	&billingAddress,
+	&billingCountryID,
+	&billingStateID,
+	&client.TaxPercentage,
+	&gstNumber,
+	&pan,
+	&client.IsExport,
+	&gstStatus,
+	&billingCountryName,
+	&billingStateName,
 )
+	
+
 	if err != nil {
 		return client, err
 	}
 
-	// 🔐 6. Static Decryption
-	// We decrypt the DB storage layer so we can then re-encrypt it 
-	// with the dynamic token in the controller.
-	client.GSTNumber, _ = Utils.DecryptFromDB(client.GSTNumber)
-	client.PAN, _ = Utils.DecryptFromDB(client.PAN)
+	// ✅ Assign nullable values safely
+    // ✅ Assign ALL nullable fields
+
+if email.Valid {
+	client.Email = email.String
+}
+
+if mobileNumber.Valid {
+	client.MobileNumber = mobileNumber.String
+}
+
+if registeredAddress.Valid {
+	client.RegisteredAddress = registeredAddress.String
+}
+
+if countryName.Valid {
+	client.CountryName = countryName.String
+}
+
+if stateName.Valid {
+	client.StateName = stateName.String
+}
+
+if zip.Valid {
+	client.ZIP = int(zip.Int64)
+}
+
+if billingAddress.Valid {
+	client.BillingAddress = billingAddress.String
+}
+
+if billingCountryID.Valid {
+	client.BillingCountryID = int(billingCountryID.Int64)
+}
+
+if billingStateID.Valid {
+	client.BillingStateID = int(billingStateID.Int64)
+}
+
+if gstNumber.Valid {
+	client.GSTNumber = gstNumber.String
+}
+
+if pan.Valid {
+	client.PAN = pan.String
+}
+
+if gstStatus.Valid {
+	client.GSTStatus = gstStatus.String
+}
+
+if billingCountryName.Valid {
+	client.BillingCountryName = billingCountryName.String
+}
+
+if billingStateName.Valid {
+	client.BillingStateName = billingStateName.String
+}
+
+	// 🔐 Decrypt only if present
+	if client.GSTNumber != "" {
+		client.GSTNumber, _ = Utils.DecryptFromDB(client.GSTNumber)
+	}
+	if client.PAN != "" {
+		client.PAN, _ = Utils.DecryptFromDB(client.PAN)
+	}
+
+	// ✅ Fix Updated fields
+	client.UpdatedAt = updatedAt.Format(time.RFC3339)
+	client.UpdatedBy = strconv.Itoa(updatedBy)
 
 	return client, nil
 }
@@ -239,4 +331,19 @@ func DeleteClient(db *sql.DB, clientID int, adminID int) error {
 		return fmt.Errorf("client with ID %d not found", clientID)
 	}
 	return nil
+} 
+
+
+func toNullString(s string) interface{} {
+	if strings.TrimSpace(s) == "" {
+		return nil
+	}
+	return s
+}
+
+func toNullInt(i int) interface{} {
+	if i == 0 {
+		return nil
+	}
+	return i
 }

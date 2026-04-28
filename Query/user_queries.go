@@ -56,4 +56,7 @@ const (
 
 	ResetPasswordQuery = `
     UPDATE users SET password = $1, is_first_login = false WHERE userid = $2;`
+
+     
+
 )

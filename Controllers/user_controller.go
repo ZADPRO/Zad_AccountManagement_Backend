@@ -37,9 +37,21 @@ func CreateUser(db *sql.DB) gin.HandlerFunc {
 		// 2. Service handles DB Encryption & Welcome Email
 		id, err := Services.AddNewUser(db, req)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, hashapi.Encrypt(gin.H{"status": false, "message": err.Error()}, true, token))
-			return
-		}
+
+    if err.Error() == "email already exists" {
+        c.JSON(http.StatusConflict, hashapi.Encrypt(gin.H{
+            "status": false,
+            "message": "email already exists",
+        }, true, token))
+        return
+    }
+
+    c.JSON(http.StatusInternalServerError, hashapi.Encrypt(gin.H{
+        "status": false,
+        "message": err.Error(),
+    }, true, token))
+    return
+}
 
 		// 3. Encrypt Response for Frontend
 		resp := hashapi.Encrypt(dto.CreateUserResponse{

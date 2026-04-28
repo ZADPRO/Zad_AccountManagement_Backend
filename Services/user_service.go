@@ -9,6 +9,7 @@ import (
 	"invoice-backend/Models/dto" 
 	"invoice-backend/Models/responses" 
 	"invoice-backend/Query"
+	"github.com/lib/pq" 
 	
 
 	"golang.org/x/crypto/bcrypt"
@@ -43,10 +44,7 @@ func AddNewUser(db *sql.DB, req dto.CreateUserRequest) (int, error) {
     if err != nil {
         return 0, fmt.Errorf("email encryption failed: %w", err)
     }
-
-    fmt.Printf("DEBUG: inserting user code=%q username=%q roleID=%d\n", 
-        req.UserCode, req.Username, req.RoleID)
-
+	
     // 4. Insert
     var newID int
     err = db.QueryRow(
@@ -62,9 +60,16 @@ func AddNewUser(db *sql.DB, req dto.CreateUserRequest) (int, error) {
     ).Scan(&newID)
 
     if err != nil {
-        fmt.Printf("DEBUG DB insert error: %v\n", err) // ← this will show the real cause
-        return 0, fmt.Errorf("database insert failed: %w", err)
+   
+
+    if pqErr, ok := err.(*pq.Error); ok {
+        if pqErr.Code == "23505" {
+            return 0, fmt.Errorf("email already exists")
+        }
     }
+
+    return 0, fmt.Errorf("database insert failed: %w", err)
+}
 
     fmt.Printf("DEBUG: user inserted with ID=%d, sending email to %q\n", newID, req.Email)
 
