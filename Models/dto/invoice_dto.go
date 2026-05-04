@@ -19,3 +19,13 @@ type CreateInvoiceRequest struct {
 	UpdatedBy     int           `json:"updatedby"`
 	Items         []InvoiceItem `json:"items"`
 }
+type InvoiceResponse struct {
+    InvoiceID     int                `json:"invoiceid"`
+    InvoiceNumber string             `json:"invoicenumber"`
+    InvoiceDate   string             `json:"invoicedate"`
+    GrandTotal    float64            `json:"grandtotal"`
+    PaymentStatus string             `json:"paymentstatus"`
+    Client        ClientFullResponse `json:"client"`
+    Items         []InvoiceItem      `json:"items"` // ← reuses your existing InvoiceItem
+}
+

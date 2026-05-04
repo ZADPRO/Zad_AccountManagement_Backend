@@ -70,7 +70,26 @@ func SetupRoutes(r *gin.Engine, db *sql.DB) {
 			{
 				invoiceRoutes.GET("", Controller.GetInvoiceList(db))
 				invoiceRoutes.POST("", Controller.CreateInvoice(db))
-			}
+				invoiceRoutes.GET("/:id", Controller.GetInvoiceByID(db))
+			} 
+
+			bankingRoutes := protected.Group("/banking")
+{
+    bankingRoutes.GET("/current", Controller.GetBankingInfo(db))
+
+    // ✅ split endpoints
+    bankingRoutes.POST("", Controller.CreateBanking(db))       // create
+    bankingRoutes.PUT("/:id", Controller.UpdateBanking(db))    // update
+	// Inside your routes setup
+	bankingRoutes.DELETE("/:id", Controller.DeleteBankingInfo(db))
+}
+
+	fieldRoutes := protected.Group("/custom-fields")
+    {
+        fieldRoutes.GET("", Controller.GetCustomFieldList(db))
+        fieldRoutes.POST("", Controller.CreateCustomField(db))
+        fieldRoutes.DELETE("/:id", Controller.DeleteCustomField(db))
+    }
 
 			// Payments
 			//protected.POST("/payments", Controller.RecordPayment(db))

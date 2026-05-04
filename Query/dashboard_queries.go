@@ -23,4 +23,25 @@ const (
             (SELECT COALESCE(SUM(grandtotal), 0) FROM invoices WHERE paymentstatus = 'Paid') as total_revenue,
             (SELECT COALESCE(SUM(grandtotal), 0) FROM invoices WHERE paymentstatus = 'pending') as pending_amount,
             (SELECT COUNT(*) FROM invoices WHERE paymentstatus = 'pending') as overdue_count;`
-)
+ 
+        GetInvoiceByIDQuery = `
+    SELECT
+        invoiceid,
+        invoicenumber,
+        invoicedate,
+        grandtotal,
+        paymentstatus,
+        clientid
+    FROM invoices
+    WHERE invoiceid = $1;`
+
+GetInvoiceItemsByInvoiceIDQuery = `
+SELECT 
+    itemid,
+    description,
+    quantity,
+    unitprice,
+    linetotal
+FROM invoiceitems
+WHERE invoiceid = $1
+`)

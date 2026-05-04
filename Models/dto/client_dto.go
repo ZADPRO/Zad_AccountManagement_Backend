@@ -41,3 +41,27 @@ type CreateClientResponse struct {
 type DeleteRequest struct {
 	DeletedBy int `json:"deletedBy"`
 }
+type ClientFullResponse struct {
+    ClientID     int     `json:"clientid"`
+    ClientCode   string  `json:"clientCode"`
+    Name         string  `json:"name"`
+    BusinessName string  `json:"businessName"`
+	ClientType    string `json:"clienttype"`
+    Email        string  `json:"email"`
+    PrimaryNumber string `json:"mobilenumber"`
+    Address      string  `json:"registeredAddress"`
+    CountryName  string  `json:"countryName"`
+    StateName    string  `json:"stateName"`
+    ZIP          int     `json:"zip"`
+ // Tax fields
+    GSTNumber     string  `json:"gstnumber"`
+    PAN           string  `json:"pan"`
+    GSTStatus     string  `json:"gststatus"`
+    IsExport      bool    `json:"isexport"`
+    TaxPercentage float64 `json:"tax_percentage"`
+
+    // Billing fields
+    BillingAddress string `json:"billingAddress"`
+    BillingCountry string `json:"billingCountry"`
+    BillingState   string `json:"billingState"`
+}

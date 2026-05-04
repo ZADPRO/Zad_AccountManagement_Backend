@@ -19,8 +19,6 @@ func GetCountries(db *sql.DB) gin.HandlerFunc {
         fmt.Printf("DEBUG GetCountries token len: %d\n", len(token))
         // ...
     
-
-
 		data, err := Services.GetDropdownData(db, Query.GetCountriesDropdownQuery)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, hashapi.Encrypt(dto.DropdownResponse{

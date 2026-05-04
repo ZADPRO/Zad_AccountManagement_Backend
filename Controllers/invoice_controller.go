@@ -4,12 +4,14 @@ import (
 	"database/sql"
 	"encoding/json"
 	"invoice-backend/Helper/HashAPI"
-	
+	"strconv"
 	"invoice-backend/Models/dto"
 	"invoice-backend/Query"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"invoice-backend/Services"
+
 )
 
 func CreateInvoice(db *sql.DB) gin.HandlerFunc {
@@ -115,5 +117,31 @@ func GetInvoiceList(db *sql.DB) gin.HandlerFunc {
 			"status": true,
 			"data":   invoices,
 		}, true, token))
+	}
+}
+func GetInvoiceByID(db *sql.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		// 1. Get ID from URL
+		idParam := c.Param("id")
+		invoiceID, err := strconv.Atoi(idParam)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "Invalid invoice ID",
+			})
+			return
+		}
+
+		// 2. Call service
+		invoice, err := Services.GetInvoiceByID(db, invoiceID)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		// 3. Return JSON
+		c.JSON(http.StatusOK, invoice)
 	}
 }
