@@ -112,25 +112,30 @@ func SoftDeleteBankingDetails(db *sql.DB, detailsID int, userID int) error {
 // AddCustomField handles encryption and insertion of a new field definition
 // AddCustomField saves the definition directly without DB-level encryption
 // AddCustomField saves the definition directly to Postgres without DB-level encryption
-func AddCustomField(db *sql.DB, req dto.CreateCustomFieldRequest, creatorID int) (int, error) {
-    var newID int
+func AddCustomField(db *sql.DB, req dto.CreateCustomFieldRequest, creatorID int) (responses.CustomFieldData, error) {
+    var field responses.CustomFieldData
 
-    // req.FieldLabel is now passed as plain text directly to the DB
     err := db.QueryRow(
         Query.CreateCustomFieldQuery,
-        req.FieldLabel, // <--- Plain Text
-        req.FieldType, 
+        req.FieldLabel,
+        req.FieldType,
         req.IsRequired,
         creatorID,
-    ).Scan(&newID)
+    ).Scan(&field.FieldID)
 
     if err != nil {
-        return 0, fmt.Errorf("database insert failed: %w", err)
+        return field, fmt.Errorf("database insert failed: %w", err)
     }
 
-    return newID, nil
-}
+    // Fill remaining fields manually
+    field.FieldLabel = req.FieldLabel
+    field.FieldType = req.FieldType
+    field.IsRequired = req.IsRequired
+    field.CreatedBy = creatorID
+    // CreatedAt can be left empty or fetched if needed
 
+    return field, nil
+}
 func FetchAllCustomFields(db *sql.DB) ([]responses.CustomFieldData, error) {
     rows, err := db.Query(Query.GetAllCustomFieldsQuery)
     if err != nil {

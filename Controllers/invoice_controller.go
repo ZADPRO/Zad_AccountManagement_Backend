@@ -2,83 +2,84 @@ package Controller
 
 import (
 	"database/sql"
-	"encoding/json"
 	"invoice-backend/Helper/HashAPI"
 	"strconv"
 	"invoice-backend/Models/dto"
 	"invoice-backend/Query"
 	"net/http"
-
 	"github.com/gin-gonic/gin"
-	"invoice-backend/Services"
+	"invoice-backend/Services" 
+	"fmt" 
+	"encoding/json"
 
 )
 
 func CreateInvoice(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		token := getToken(c)
-		var packet dto.EncryptedPacket
 
-		// 1. Bind the Encrypted Packet
+		token := getToken(c)
+
+		// 1. Read encrypted packet
+		var packet dto.EncryptedPacket
 		if err := c.ShouldBindJSON(&packet); err != nil {
-			c.JSON(http.StatusBadRequest, hashapi.Encrypt(gin.H{"status": false, "message": "Invalid Packet"}, true, token))
+			c.JSON(http.StatusBadRequest, hashapi.Encrypt(gin.H{
+				"status": false,
+				"message": "Invalid Packet",
+			}, true, token))
 			return
 		}
 
-		// 2. Decrypt the Invoice Data
+		// 2. Decrypt request
 		decrypted, err := hashapi.Decrypt(packet.Data, token)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, hashapi.Encrypt(gin.H{"status": false, "message": "Decryption failed"}, true, token))
+			c.JSON(http.StatusUnauthorized, hashapi.Encrypt(gin.H{
+				"status": false,
+				"message": "Decryption failed",
+			}, true, token))
 			return
 		}
 
-		// Unmarshal decrypted data into the struct
+		// 3. Convert decrypted → struct
 		var req dto.CreateInvoiceRequest
 		jsonBytes, _ := json.Marshal(decrypted)
-		json.Unmarshal(jsonBytes, &req)
+		if err := json.Unmarshal(jsonBytes, &req); err != nil {
 
-		// 3. Begin Transaction
-		tx, err := db.Begin()
+	fmt.Println("UNMARSHAL ERROR:", err)
+	fmt.Println("DECRYPTED DATA:", string(jsonBytes))
+
+	c.JSON(http.StatusBadRequest, hashapi.Encrypt(gin.H{
+		"status": false,
+		"message": err.Error(),
+	}, true, token))
+
+	return
+}
+
+		// ✅ DEBUG (now this will work correctly)
+		fmt.Println("RAW REQ:", req)
+		fmt.Println("DATE:", req.InvoiceDate)
+
+		// 4. Call service
+		newInvoiceID, err := Services.CreateFullInvoice(db, req)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, hashapi.Encrypt(gin.H{"status": false, "message": "Transaction error"}, true, token))
+			c.JSON(http.StatusInternalServerError, hashapi.Encrypt(gin.H{
+				"status": false,
+				"message": err.Error(),
+			}, true, token))
 			return
 		}
 
-		// 4. Insert Header
-		var newInvoiceID int
-		err = tx.QueryRow(Query.InsertInvoiceHeaderQuery,
-			req.InvoiceNumber, req.ClientID, req.InvoiceDate, req.GrandTotal, req.PaymentStatus, req.UpdatedBy,
-		).Scan(&newInvoiceID)
+		// 5. Encrypt response
+		resp := hashapi.Encrypt(gin.H{
+			"status": true,
+			"message": "Invoice Created Successfully",
+			"invoiceid": newInvoiceID,
+		}, true, token)
 
-		if err != nil {
-			tx.Rollback()
-			c.JSON(http.StatusInternalServerError, hashapi.Encrypt(gin.H{"status": false, "message": "Header Insert Failed"}, true, token))
-			return
-		}
-
-		// 5. Insert Items
-		for _, item := range req.Items {
-			_, err = tx.Exec(Query.InsertInvoiceItemQuery,
-				newInvoiceID, item.Description, item.Quantity, item.UnitPrice, item.LineTotal, req.UpdatedBy,
-			)
-			if err != nil {
-				tx.Rollback()
-				c.JSON(http.StatusInternalServerError, hashapi.Encrypt(gin.H{"status": false, "message": "Item insertion failed"}, true, token))
-				return
-			}
-		}
-
-		// 6. Commit and Send Encrypted Response
-		tx.Commit()
-		c.JSON(http.StatusOK, gin.H{
-    "status": true,
-    "data": hashapi.Encrypt(dto.BaseResponse{
-        Status:  true,
-        Message: "Invoice Created Successfully",
-    }, true, token),
-})
+		c.JSON(http.StatusOK, resp)
 	}
 }
+
 
 func GetInvoiceList(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -141,7 +142,10 @@ func GetInvoiceByID(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		// 3. Return JSON
-		c.JSON(http.StatusOK, invoice)
+		c.JSON(http.StatusOK, gin.H{
+			"status": true,
+			"data": invoice,
+		})
 	}
+	
 }

@@ -3,7 +3,7 @@ package Controller
 import (
 	"database/sql"
 	"encoding/json"
-	"invoice-backend/Helper/HashAPI"
+	hashapi "invoice-backend/Helper/HashAPI"
 	"invoice-backend/Models/dto"
 	"invoice-backend/Models/responses"
 	"invoice-backend/Services"
@@ -17,7 +17,7 @@ func CreateUser(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := getToken(c)
 		var packet dto.EncryptedPacket
-
+		
 		if err := c.ShouldBindJSON(&packet); err != nil {
 			c.JSON(http.StatusBadRequest, hashapi.Encrypt(gin.H{"status": false, "message": "Invalid Packet"}, true, token))
 			return

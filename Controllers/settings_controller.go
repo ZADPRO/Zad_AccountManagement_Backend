@@ -177,54 +177,48 @@ func DeleteBankingInfo(db *sql.DB) gin.HandlerFunc {
 // CreateCustomField handles the network handshake and calls the plain-text service
 func CreateCustomField(db *sql.DB) gin.HandlerFunc {
     return func(c *gin.Context) {
-        token := getToken(c) // Get session token for the handshake
+        token := getToken(c)
         var packet dto.EncryptedPacket
 
-        // 1. Bind the encrypted packet coming from React
         if err := c.ShouldBindJSON(&packet); err != nil {
             c.JSON(http.StatusBadRequest, hashapi.Encrypt(gin.H{"status": false, "message": "Invalid Request Packet"}, true, token))
             return
         }
 
-        // 2. Decrypt the network packet into plain JSON
         decrypted, err := hashapi.Decrypt(packet.Data, token)
         if err != nil {
             c.JSON(http.StatusUnauthorized, hashapi.Encrypt(gin.H{"status": false, "message": "Security Handshake Failed"}, true, token))
             return
         }
 
-        // 3. Map Decrypted Data to the DTO
         var req dto.CreateCustomFieldRequest
         jsonBytes, _ := json.Marshal(decrypted)
         json.Unmarshal(jsonBytes, &req)
 
-        // 4. Get User ID from Middleware (for audit log)
-        // 4. Get User ID safely
-val, exists := c.Get("user_id")
-if !exists {
-    // If user_id isn't in context, the middleware failed or is missing
-    c.JSON(http.StatusUnauthorized, hashapi.Encrypt(gin.H{"status": false, "message": "User context missing"}, true, token))
-    return
-}
+        val, exists := c.Get("user_id")
+        if !exists {
+            c.JSON(http.StatusUnauthorized, hashapi.Encrypt(gin.H{"status": false, "message": "User context missing"}, true, token))
+            return
+        }
+        userID := int(val.(float64))
 
-// Use float64 assertion if your JWT library stores numbers that way
-userID := int(val.(float64))
-        // 5. Call Service (Service stores it as PLAIN TEXT)
         id, err := Services.AddCustomField(db, req, userID)
         if err != nil {
             c.JSON(http.StatusInternalServerError, hashapi.Encrypt(gin.H{"status": false, "message": "Failed to save field"}, true, token))
             return
         }
 
-        // 6. ENCRYPT the response so React can decrypt it
+        // ✅ FIX: Return the full data object so React can see the 'fieldLabel'
         c.JSON(http.StatusCreated, hashapi.Encrypt(gin.H{
-            "status":  true,
-            "message": "Custom field created successfully",
-            "fieldId": id,
+            "status":     true,
+            "message":    "Custom field created successfully",
+            "fieldId":    id,
+            "fieldLabel": req.FieldLabel, // Send this back
+            "fieldType":  req.FieldType,  // Send this back
+            "isRequired": req.IsRequired, // Send this back
         }, true, token))
     }
 }
-
 // GetCustomFieldList retrieves plain data from Service and encrypts it for the Wire
 func GetCustomFieldList(db *sql.DB) gin.HandlerFunc {
     return func(c *gin.Context) {

@@ -2,13 +2,19 @@ package Query
 
 const (
 	InsertInvoiceHeaderQuery = `
-        INSERT INTO invoices (invoicenumber, clientid, invoicedate, grandtotal, paymentstatus, updatedat, updatedby)
-        VALUES ($1, $2, $3, $4, $5, NOW(), $6)
+        INSERT INTO invoices (invoicenumber, clientid, invoicedate, grandtotal, paymentstatus, updatedat, updatedby, "CustomValues")
+        VALUES ($1, $2, $3, $4, $5, NOW(), $6, $7::jsonb)
         RETURNING invoiceid;`
 
 	InsertInvoiceItemQuery = `
         INSERT INTO invoiceitems (invoiceid, description, quantity, unitprice, linetotal, updatedat, updatedby)
         VALUES ($1, $2, $3, $4, $5, NOW(), $6);`
+
+    InsertInvoiceCustomFieldQuery = `
+INSERT INTO "InvoiceCustomFieldValues"
+("InvoiceID", "FieldID", "Value")
+VALUES ($1, $2, $3);
+`
 
 	GetInvoiceListQuery = `
         SELECT i.invoiceid, i.invoicenumber, c."name", i.invoicedate, i.grandtotal, i.paymentstatus 
@@ -31,9 +37,12 @@ const (
         invoicedate,
         grandtotal,
         paymentstatus,
-        clientid
+        clientid,
+        "CustomValues"
     FROM invoices
     WHERE invoiceid = $1;`
+
+   
 
 GetInvoiceItemsByInvoiceIDQuery = `
 SELECT 
@@ -43,5 +52,14 @@ SELECT
     unitprice,
     linetotal
 FROM invoiceitems
-WHERE invoiceid = $1
-`)
+WHERE invoiceid = $1;
+`
+ GetInvoiceCustomFieldsQuery = `
+    SELECT 
+     cfd."FieldLabel",
+     icfv."Value"
+     FROM "InvoiceCustomFieldValues" icfv
+     JOIN "CustomFieldDefinitions" cfd
+     ON icfv."FieldID" = cfd."FieldID"
+     WHERE icfv."InvoiceID" = $1;`
+     )

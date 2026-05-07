@@ -10,8 +10,8 @@ import (
 
 // SendPasswordResetEmail sends an email with a link to reset the user's password
 func SendPasswordResetEmail(userEmail, resetToken string) error {
-	from := os.Getenv("SMTP_EMAIL")
-	pass := os.Getenv("SMTP_APP_PASSWORD")
+	from := "gopika.2272005@gmail.com"
+	pass := "jozdzftewsmjgywj"
 	smtpHost := "smtp.gmail.com"
 	
 	// Default to 587 if PORT is not set or invalid
@@ -61,7 +61,8 @@ func SendWelcomeEmail(userEmail, tempPassword string) error {
 	
 	
 	smtpPort, _ := strconv.Atoi(os.Getenv("SMTP_PORT"))
-
+	fmt.Println("SMTP EMAIL:", os.Getenv("SMTP_EMAIL"))
+	fmt.Println("SMTP PASS LEN:", len(os.Getenv("SMTP_APP_PASSWORD")))
 	fmt.Printf("DEBUG SMTP: from=%q host=smtp.gmail.com port=%d\n", from, smtpPort)
 	fmt.Printf("DEBUG env: SMTP_EMAIL=%q SMTP_APP_PASSWORD len=%d\n", 
     os.Getenv("SMTP_EMAIL"), 

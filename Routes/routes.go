@@ -52,7 +52,7 @@ func SetupRoutes(r *gin.Engine, db *sql.DB) {
 				clientRoutes.POST("", Controller.CreateClient(db))
 				clientRoutes.GET("/:id", Controller.GetClientByID(db))
 				clientRoutes.PUT("/:id", Controller.UpdateClient(db))
-				clientRoutes.DELETE(":id", Controller.DeleteClient(db))
+				clientRoutes.DELETE("/:id", Controller.DeleteClient(db))
 			}
 
 			// User Management
