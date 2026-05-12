@@ -5,7 +5,7 @@ import (
 	"invoice-backend/Models/internal"
 )
 
-// UserData matches your "active_users" view and original struct
+
 type UserData struct {
 	UserID       int    `json:"userId"`
 	UserCode     string `json:"userCode"`

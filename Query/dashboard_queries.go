@@ -2,13 +2,15 @@ package Query
 
 const (
 	InsertInvoiceHeaderQuery = `
-        INSERT INTO invoices (invoicenumber, clientid, invoicedate, grandtotal, paymentstatus, updatedat, updatedby, "CustomValues")
-        VALUES ($1, $2, $3, $4, $5, NOW(), $6, $7::jsonb)
+        INSERT INTO invoices (invoicenumber, clientid, invoicedate, grandtotal, paymentstatus, updatedat, updatedby, "CustomValues", invoiceduedate, currency, "bankID",
+    invoicetype)
+        VALUES ($1, $2, $3, $4, $5, NOW(), $6, $7::jsonb, $8, $9, $10,
+    $11)
         RETURNING invoiceid;`
 
 	InsertInvoiceItemQuery = `
-        INSERT INTO invoiceitems (invoiceid, description, quantity, unitprice, linetotal, updatedat, updatedby)
-        VALUES ($1, $2, $3, $4, $5, NOW(), $6);`
+        INSERT INTO invoiceitems (invoiceid, description, quantity, unitprice, linetotal, updatedat, updatedby,custom_field_values)
+        VALUES ($1, $2, $3, $4, $5, NOW(), $6,$7);`
 
     InsertInvoiceCustomFieldQuery = `
 INSERT INTO "InvoiceCustomFieldValues"
@@ -31,18 +33,34 @@ VALUES ($1, $2, $3);
             (SELECT COUNT(*) FROM invoices WHERE paymentstatus = 'pending') as overdue_count;`
  
         GetInvoiceByIDQuery = `
-    SELECT
-        invoiceid,
-        invoicenumber,
-        invoicedate,
-        grandtotal,
-        paymentstatus,
-        clientid,
-        "CustomValues"
-    FROM invoices
-    WHERE invoiceid = $1;`
+SELECT
+    i.invoiceid,
+    i.invoicenumber,
+    i.invoicedate,
+    i.grandtotal,
+    i.paymentstatus,
+    i.clientid,
+    i."CustomValues",
+    i.invoiceduedate,
+    i.currency,
+    i."bankID",
+    i.invoicetype,
 
-   
+    b."BankName",
+    b."AccountNumber",
+    b."ifscCode",
+    b."BankAddress",
+    b."LogoURL",
+    b."AccountType",
+    b."SwiftCode"
+
+FROM invoices i
+
+LEFT JOIN "BankingDetails" b
+ON i."bankID" = b."DetailsID"
+
+WHERE i.invoiceid = $1;
+`
 
 GetInvoiceItemsByInvoiceIDQuery = `
 SELECT 
@@ -50,7 +68,8 @@ SELECT
     description,
     quantity,
     unitprice,
-    linetotal
+    linetotal,
+    custom_field_values
 FROM invoiceitems
 WHERE invoiceid = $1;
 `
@@ -62,4 +81,17 @@ WHERE invoiceid = $1;
      JOIN "CustomFieldDefinitions" cfd
      ON icfv."FieldID" = cfd."FieldID"
      WHERE icfv."InvoiceID" = $1;`
-     )
+     
+ DeleteInvoiceItemsQuery = ` UPDATE invoiceitems 
+    SET
+        deletedat = NOW(),
+        deletedby = $1
+    WHERE invoiceid = $2; `
+
+DeleteInvoiceQuery = `
+    UPDATE invoices
+    SET
+        deletedat = NOW(),
+        deletedby = $1
+    WHERE invoiceid = $2;
+`)

@@ -2,26 +2,31 @@ package Controller
 
 import (
     "database/sql"
-    "encoding/json" // Added missing import
+    "encoding/json" 
     "net/http"
     
     "invoice-backend/Models/dto"
     "invoice-backend/Services"
 	"invoice-backend/Models/responses"
-    "invoice-backend/Helper/HashAPI" // Ensure this matches your folder structure 
+    "invoice-backend/Helper/HashAPI"  
 	"strconv"
     
     "github.com/gin-gonic/gin"
 )
 
-// CreateOrUpdateBanking handles the POST request from the "Add Bank Details" Modal
+// --- BANKING MANAGEMENT ---
+
+// CreateBanking handles the creation of new bank account details.
+// It decrypts the incoming banking packet and associates it with the current admin's ID.
 func CreateBanking(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := getToken(c)
 
+        // Authentication: Extract Admin ID from the session context
 		adminIDRaw, _ := c.Get("user_id")
 		adminID := int(adminIDRaw.(float64))
 
+        // 1. Packet Binding
 		var packet dto.EncryptedPacket
 		if err := c.ShouldBindJSON(&packet); err != nil {
 			c.JSON(http.StatusBadRequest, hashapi.Encrypt(gin.H{
@@ -30,7 +35,7 @@ func CreateBanking(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		// 🔓 Decrypt
+		// 2. Security Handshake (Decryption)
 		decrypted, err := hashapi.Decrypt(packet.Data, token)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, hashapi.Encrypt(gin.H{
@@ -39,12 +44,12 @@ func CreateBanking(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		// 🔁 Map to DTO
+		// 3. Transformation: Map the generic decrypted interface to a typed Banking DTO
 		var req dto.SaveBankingRequest
 		jsonBytes, _ := json.Marshal(decrypted)
 		json.Unmarshal(jsonBytes, &req)
 
-		// 🆕 Call INSERT service
+		// 4. Persistence: Pass to service layer for SQL insertion
 		id, err := Services.CreateBankingDetails(db, req, adminID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, hashapi.Encrypt(gin.H{
@@ -61,6 +66,9 @@ func CreateBanking(db *sql.DB) gin.HandlerFunc {
 	}
 } 
 
+// UpdateBanking modifies existing bank records.
+// Logic Note: We pull the ID from the URL path to ensure the user isn't 
+// attempting to overwrite a different record by spoofing the JSON ID.
 func UpdateBanking(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := getToken(c)
@@ -68,7 +76,7 @@ func UpdateBanking(db *sql.DB) gin.HandlerFunc {
 		adminIDRaw, _ := c.Get("user_id")
 		adminID := int(adminIDRaw.(float64))
 
-		// 📌 Get ID from URL
+		// Get ID from RESTful path: /banking/:id
 		idStr := c.Param("id")
 		detailsID, _ := strconv.Atoi(idStr)
 
@@ -80,7 +88,7 @@ func UpdateBanking(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		// 🔓 Decrypt
+		// Decrypt
 		decrypted, err := hashapi.Decrypt(packet.Data, token)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, hashapi.Encrypt(gin.H{
@@ -93,7 +101,7 @@ func UpdateBanking(db *sql.DB) gin.HandlerFunc {
 		jsonBytes, _ := json.Marshal(decrypted)
 		json.Unmarshal(jsonBytes, &req)
 
-		// 🔥 IMPORTANT: force ID from URL (don’t trust frontend blindly)
+		// DATA INTEGRITY: Override any ID in the body with the ID from the URL path
 		req.DetailsID = detailsID
 
 		// 🔁 Call UPDATE service
@@ -114,8 +122,7 @@ func UpdateBanking(db *sql.DB) gin.HandlerFunc {
 }
 
 
-
-// GetBankingInfo retrieves the data for the Settings Page
+// GetBankingInfo retrieves all accounts associated with the current user.
 func GetBankingInfo(db *sql.DB) gin.HandlerFunc {
     return func(c *gin.Context) {
         token := getToken(c)
@@ -145,6 +152,7 @@ func GetBankingInfo(db *sql.DB) gin.HandlerFunc {
     }
 }
 
+// DeleteBankingInfo performs a soft delete on banking records.
 func DeleteBankingInfo(db *sql.DB) gin.HandlerFunc {
     return func(c *gin.Context) {
         token := getToken(c)
@@ -174,7 +182,12 @@ func DeleteBankingInfo(db *sql.DB) gin.HandlerFunc {
     }
 }
 
-// CreateCustomField handles the network handshake and calls the plain-text service
+
+// --- CUSTOM FIELDS MANAGEMENT ---
+
+// CreateCustomField adds dynamic inputs to invoices/clients.
+// It returns the newly created field data so the frontend can update 
+// its state immediately without a full page refresh.
 func CreateCustomField(db *sql.DB) gin.HandlerFunc {
     return func(c *gin.Context) {
         token := getToken(c)
@@ -208,18 +221,18 @@ func CreateCustomField(db *sql.DB) gin.HandlerFunc {
             return
         }
 
-        // ✅ FIX: Return the full data object so React can see the 'fieldLabel'
         c.JSON(http.StatusCreated, hashapi.Encrypt(gin.H{
             "status":     true,
             "message":    "Custom field created successfully",
             "fieldId":    id,
-            "fieldLabel": req.FieldLabel, // Send this back
-            "fieldType":  req.FieldType,  // Send this back
-            "isRequired": req.IsRequired, // Send this back
+            "fieldLabel": req.FieldLabel, 
+            "fieldType":  req.FieldType,  
+            "isRequired": req.IsRequired, 
         }, true, token))
     }
 }
-// GetCustomFieldList retrieves plain data from Service and encrypts it for the Wire
+
+// GetCustomFieldList fetches all configured custom fields.
 func GetCustomFieldList(db *sql.DB) gin.HandlerFunc {
     return func(c *gin.Context) {
         token := getToken(c)

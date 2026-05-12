@@ -3,9 +3,10 @@ package Middleware
 import (
 	"strings"
 
-	"invoice-backend/DB" 
-	"invoice-backend/Helper/AccessToken"
+	"invoice-backend/DB"
+	accesstoken "invoice-backend/Helper/AccessToken"
 	"invoice-backend/Helper/UserValidation"
+
 	"github.com/gin-gonic/gin"
 )
 

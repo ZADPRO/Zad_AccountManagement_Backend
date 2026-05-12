@@ -2,23 +2,22 @@ package Controller
 
 import (
 	"database/sql"
-	"invoice-backend/Helper/HashAPI" // Ensure this matches your encryption helper path
+	"invoice-backend/Helper/HashAPI" 
 	"invoice-backend/Models/dto"
 	"invoice-backend/Query"
 	"invoice-backend/Services"
 	"net/http"
-	"fmt"
 	"github.com/gin-gonic/gin"
 )
 
-// GetCountries handles the Country list for forms
+// GetCountries retrieves a list of countries for address forms.
+// It uses the generic DropdownData service to execute a specific SQL query.
 func GetCountries(db *sql.DB) gin.HandlerFunc {
     return func(c *gin.Context) {
+		// Extract JWT for response encryption
         token := getToken(c)
-        fmt.Printf("DEBUG GetCountries token: %q\n", token)  // ← add this
-        fmt.Printf("DEBUG GetCountries token len: %d\n", len(token))
-        // ...
-    
+        
+		// Fetch data from the database using a predefined query constant
 		data, err := Services.GetDropdownData(db, Query.GetCountriesDropdownQuery)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, hashapi.Encrypt(dto.DropdownResponse{
@@ -26,7 +25,9 @@ func GetCountries(db *sql.DB) gin.HandlerFunc {
 			}, true, token))
 			return
 		}
-
+		
+		// Encrypt the list of countries. Even though countries aren't sensitive,
+		// the frontend expects all authenticated responses to be encrypted.
 		c.JSON(http.StatusOK, hashapi.Encrypt(dto.DropdownResponse{
 			BaseResponse: dto.BaseResponse{Status: true, Message: "Success"},
 			Data:         data,
@@ -34,7 +35,7 @@ func GetCountries(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
-// GetStates handles the State list for forms
+// GetStates retrieves a list of states/provinces for address forms.
 func GetStates(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := getToken(c)
@@ -54,7 +55,8 @@ func GetStates(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
-// GetRoles handles the Role list for User Management
+// GetRoles retrieves available user roles (e.g., Admin, Staff, Viewer).
+// This is used in User Management sections to assign permissions.
 func GetRoles(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := getToken(c)

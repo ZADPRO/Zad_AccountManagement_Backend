@@ -2,7 +2,7 @@ package dto
 
 import "invoice-backend/Models/internal"
 
-// CreateUserRequest matches the JSON expected from your React form
+
 type CreateUserRequest struct {
 	UserCode  string `json:"userCode" binding:"required"`
 	Username  string `json:"username" binding:"required"`

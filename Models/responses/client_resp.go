@@ -5,7 +5,7 @@ import (
 	"invoice-backend/Models/internal"
 )
 
-// ClientListModel matches the "active_clients" view
+
 type ClientListModel struct {
 	ClientID     int    `json:"clientId"`
 	ClientCode   string `json:"clientCode"`
@@ -28,8 +28,8 @@ type ClientDetailsResponse struct {
     SupplyTypeID      int     `json:"supplyTypeId"`
     IsActive          bool    `json:"isActive"`
     ClientType        string  `json:"clientType"`
-    UpdatedAt         string  `json:"updatedAt"`   // add
-    UpdatedBy         string  `json:"updatedBy"`   // add
+    UpdatedAt         string  `json:"updatedAt"`   
+    UpdatedBy         string  `json:"updatedBy"`   
     Email             string  `json:"email"`
     MobileNumber      string  `json:"mobileNumber"`
 

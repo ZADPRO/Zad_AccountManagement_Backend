@@ -127,15 +127,17 @@ func AddCustomField(db *sql.DB, req dto.CreateCustomFieldRequest, creatorID int)
         return field, fmt.Errorf("database insert failed: %w", err)
     }
 
-    // Fill remaining fields manually
+    
     field.FieldLabel = req.FieldLabel
     field.FieldType = req.FieldType
     field.IsRequired = req.IsRequired
     field.CreatedBy = creatorID
-    // CreatedAt can be left empty or fetched if needed
+    
 
     return field, nil
 }
+
+
 func FetchAllCustomFields(db *sql.DB) ([]responses.CustomFieldData, error) {
     rows, err := db.Query(Query.GetAllCustomFieldsQuery)
     if err != nil {
@@ -146,10 +148,10 @@ func FetchAllCustomFields(db *sql.DB) ([]responses.CustomFieldData, error) {
     var fields []responses.CustomFieldData
     for rows.Next() {
         var f responses.CustomFieldData
-        // Scan the 6 columns defined in your SQL Query
+        
         err := rows.Scan(
             &f.FieldID, 
-            &f.FieldLabel, // <--- Scanned as plain text
+            &f.FieldLabel, 
             &f.FieldType, 
             &f.IsRequired, 
             &f.CreatedAt, 

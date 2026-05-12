@@ -89,7 +89,7 @@ SELECT
     COALESCE(t.isexport, false),
     COALESCE(t.gststatus, ''),
 
-    -- ✅ ADD THESE (names from lookup tables)
+    
     COALESCE(cn.countryname, ''),
     COALESCE(sn.statename, '')
 
@@ -97,7 +97,7 @@ FROM clientinformation c
 LEFT JOIN clienttaxdetails t 
     ON c.clientid = t.clientid
 
--- ✅ JOIN lookup tables
+
 LEFT JOIN countries cn 
     ON t.billingcountryid = cn.countryid
 

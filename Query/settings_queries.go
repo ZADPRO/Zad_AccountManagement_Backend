@@ -48,14 +48,14 @@ WHERE "DetailsID" = $9
 RETURNING "DetailsID";
     `
 
-    // In your queries package/file
+   
 GetBankingDetailsQuery = `
     SELECT "DetailsID", "BankName", "AccountNumber", "ifscCode", "BankAddress", "LogoURL", "AccountType", "SwiftCode" 
     FROM "BankingDetails" 
     WHERE "userid" = $1 AND "DeletedAt" IS NULL
     ORDER BY "CreatedAt" DESC` 
 
-// In your queries package
+
 DeleteBankingDetailsQuery = `
     UPDATE "BankingDetails" 
     SET "DeletedAt" = NOW(), "DeletedBy" = $1 

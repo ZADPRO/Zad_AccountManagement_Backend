@@ -28,7 +28,7 @@ func SetupRoutes(r *gin.Engine, db *sql.DB) {
 		// --- PUBLIC ROUTES (No Token Required) ---
 		v1.POST("/login", Controller.LoginHandler) 
 		
-		// Dropdowns (Often public or semi-public for registration/setup)
+		// Dropdowns 
 		drops := v1.Group("/dropdowns")
 		{
 			drops.GET("/states", Controller.GetStates(db))
@@ -71,16 +71,16 @@ func SetupRoutes(r *gin.Engine, db *sql.DB) {
 				invoiceRoutes.GET("", Controller.GetInvoiceList(db))
 				invoiceRoutes.POST("", Controller.CreateInvoice(db))
 				invoiceRoutes.GET("/:id", Controller.GetInvoiceByID(db))
+				invoiceRoutes.DELETE("/:id", Controller.DeleteInvoice(db))
+				
 			} 
 
 			bankingRoutes := protected.Group("/banking")
 {
     bankingRoutes.GET("/current", Controller.GetBankingInfo(db))
 
-    // ✅ split endpoints
-    bankingRoutes.POST("", Controller.CreateBanking(db))       // create
-    bankingRoutes.PUT("/:id", Controller.UpdateBanking(db))    // update
-	// Inside your routes setup
+    bankingRoutes.POST("", Controller.CreateBanking(db))       
+    bankingRoutes.PUT("/:id", Controller.UpdateBanking(db))    
 	bankingRoutes.DELETE("/:id", Controller.DeleteBankingInfo(db))
 }
 
@@ -90,10 +90,6 @@ func SetupRoutes(r *gin.Engine, db *sql.DB) {
         fieldRoutes.POST("", Controller.CreateCustomField(db))
         fieldRoutes.DELETE("/:id", Controller.DeleteCustomField(db))
     }
-
-			// Payments
-			//protected.POST("/payments", Controller.RecordPayment(db))
-
 			// Dashboard Stats
 			protected.GET("/dashboard/summary", Controller.GetDashboardStats(db))
 		}

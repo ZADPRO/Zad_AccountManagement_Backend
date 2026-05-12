@@ -13,6 +13,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+
+// CreateUser handles the registration of a new user in the system.
+// It decrypts the request, passes it to the Service layer (which handles 
+// hashing and email notifications), and returns an encrypted response.
 func CreateUser(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := getToken(c)
@@ -23,7 +27,7 @@ func CreateUser(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		// 1. Decrypt Axios Request
+		// 1. Decrypt incoming data using the session token
 		decrypted, err := hashapi.Decrypt(packet.Data, token)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, hashapi.Encrypt(gin.H{"status": false, "message": "Decryption failed"}, true, token))
@@ -34,16 +38,16 @@ func CreateUser(db *sql.DB) gin.HandlerFunc {
 		jsonBytes, _ := json.Marshal(decrypted)
 		json.Unmarshal(jsonBytes, &req)
 
-		// 2. Service handles DB Encryption & Welcome Email
+		// 2. Logic: The service layer adds the user to the DB and triggers a Welcome Email
 		id, err := Services.AddNewUser(db, req)
 		if err != nil {
-
-    if err.Error() == "email already exists" {
-        c.JSON(http.StatusConflict, hashapi.Encrypt(gin.H{
-            "status": false,
-            "message": "email already exists",
-        }, true, token))
-        return
+		// Handle specific business logic error: Email duplication
+		if err.Error() == "email already exists" {
+			c.JSON(http.StatusConflict, hashapi.Encrypt(gin.H{
+				"status": false,
+				"message": "email already exists",
+			}, true, token))
+			return
     }
 
     c.JSON(http.StatusInternalServerError, hashapi.Encrypt(gin.H{
@@ -53,7 +57,7 @@ func CreateUser(db *sql.DB) gin.HandlerFunc {
     return
 }
 
-		// 3. Encrypt Response for Frontend
+		// 3. Return success with the new UserID
 		resp := hashapi.Encrypt(dto.CreateUserResponse{
 			BaseResponse: dto.BaseResponse{Status: true, Message: "User created successfully"},
 			UserID:       id,
@@ -62,6 +66,7 @@ func CreateUser(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
+// GetUserList retrieves all user records for administrative display.
 func GetUserList(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := getToken(c)
@@ -79,6 +84,7 @@ func GetUserList(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
+// GetUserByID fetches a specific user's details based on the URL parameter ID.
 func GetUserByID(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := getToken(c)
@@ -95,6 +101,7 @@ func GetUserByID(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
+// GetProfile retrieves the profile details of the currently authenticated user.
 func GetProfile(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := getToken(c)
@@ -117,6 +124,7 @@ func GetProfile(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
+// UpdateUser modifies profile or user information.
 func UpdateUser(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := getToken(c)
@@ -141,6 +149,8 @@ func UpdateUser(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
+// ForceChangePassword allows an admin or system to reset a specific user's password.
+// This is typically used for "Forgot Password" or initial setup scenarios.
 func ForceChangePassword(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := getToken(c)
@@ -167,6 +177,8 @@ func ForceChangePassword(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
+// DeleteUser performs a deletion of a user record.
+// Logic Note: The adminID is passed to the service to audit who performed the deletion.
 func DeleteUser(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := getToken(c)

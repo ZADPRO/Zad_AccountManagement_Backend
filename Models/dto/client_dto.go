@@ -24,7 +24,7 @@ type CreateClientRequest struct {
 	
 	// Tax + Billing
 	BillingAddress   string  `json:"billingAddress"`
-	BillingCountryID int     `json:"billingCountryId" binding:"required"`
+	BillingCountryID int     `json:"billingCountryId"`
 	BillingStateID   *int     `json:"billingStateId"`
 
 	TaxPercentage    float64 `json:"tax_percentage"`

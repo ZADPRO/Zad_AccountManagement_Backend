@@ -8,6 +8,7 @@ type InvoiceItem struct {
 	Quantity    int     `json:"quantity"`
 	UnitPrice   float64 `json:"unitprice"`
 	LineTotal   float64 `json:"linetotal"`
+	CustomFieldValues []CustomFieldValue  `json:"customFieldValues"`
 }
 type CustomFieldValue struct {
 	FieldID int    `json:"fieldId"`
@@ -24,6 +25,10 @@ type CreateInvoiceRequest struct {
 	UpdatedBy     int           `json:"updatedby"`
 	Items         []InvoiceItem `json:"items"`
 	CustomValues []CustomFieldValue `json:"customValues"`
+	InvoiceDueDate string             `json:"invoiceduedate"`
+	Currency       string             `json:"currency"` 
+	BankID      int    `json:"bankId"`
+	InvoiceType string `json:"invoiceType"`
 }
 type InvoiceResponse struct {
     InvoiceID     int                `json:"invoiceid"`
@@ -33,6 +38,18 @@ type InvoiceResponse struct {
     PaymentStatus string             `json:"paymentstatus"`
     Client        ClientFullResponse `json:"client"`
     Items         []InvoiceItem      `json:"items"`
-	CustomFields []CustomFieldValue `json:"customFields"`
+	CustomValues []CustomFieldValue `json:"customValues"`
+	InvoiceDueDate string             `json:"invoiceduedate"`
+	Currency       string             `json:"currency"` 
+	BankID      int    `json:"bankId"`
+	InvoiceType string `json:"invoiceType"` 
+
+	InvoiceBankName      string `json:"invoiceBankName"`
+	InvoiceAccountNumber string `json:"invoiceAccountNumber"`
+	InvoiceIFSCCode      string `json:"invoiceIfscCode"`
+	InvoiceBankAddress   string `json:"invoiceBankAddress"`
+	InvoiceAccountType   string `json:"invoiceAccountType"`
+	InvoiceSwiftCode     string `json:"invoiceSwiftCode"`
+	InvoiceQRCodeURL     string `json:"invoiceQrCodeUrl"`
 }
 

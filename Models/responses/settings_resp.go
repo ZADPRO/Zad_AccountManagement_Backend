@@ -5,8 +5,8 @@ import "invoice-backend/Models/dto"
 
 type CustomFieldData struct {
 	FieldID    int    `json:"fieldId"`
-	FieldLabel string `json:"fieldLabel"` // Will be decrypted before sending
-	FieldType  string `json:"fieldType"`  // Will be decrypted before sending
+	FieldLabel string `json:"fieldLabel"` 
+	FieldType  string `json:"fieldType"`  
 	IsRequired bool   `json:"isRequired"`
 	CreatedAt  string `json:"createdAt"` 
 	CreatedBy  int    `json:"createdBy"`
@@ -22,7 +22,7 @@ type BankingDetailsData struct {
     BankName     string `json:"bankName"`
     AccountNumber string `json:"accountNumber"`
     IfscCode     string `json:"ifscCode"`
-    BankAddress  string `json:"bankAddress"` // Changed from businessAddress
+    BankAddress  string `json:"bankAddress"` 
     LogoURL      string `json:"qrCodeUrl"`
 	AccountType   string `json:"accountType"` 
     SwiftCode     string `json:"swiftCode"`
@@ -30,6 +30,5 @@ type BankingDetailsData struct {
 
 type BankingDetailsResponse struct {
     dto.BaseResponse
-    // Change 'BankingDetailsData' to '[]BankingDetailsData'
     Data []BankingDetailsData `json:"data"` 
 }

@@ -29,8 +29,8 @@ func InitDB() *gorm.DB {
 	// Open GORM connection with custom naming strategy
 	db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{
 		NamingStrategy: schema.NamingStrategy{
-			TablePrefix:   "",    // Set if you use specific schema prefixes
-			SingularTable: true, // Prevents GORM from adding 's' to table names
+			TablePrefix:   "",    
+			SingularTable: true, 
 		},
 	})
 

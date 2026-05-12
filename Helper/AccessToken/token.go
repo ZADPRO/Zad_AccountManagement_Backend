@@ -1,5 +1,8 @@
 package accesstoken
 
+// Package accesstoken provides utilities for generating, parsing, and validating JWTs.
+// It relies on the "JWT_SECRET" environment variable for cryptographic signing.
+
 import (
 	"fmt"
 	"os"
@@ -11,13 +14,17 @@ import (
 // CreateToken generates a JWT for a user. 
 // The token string is used later as a dynamic salt for HashAPI encryption.
 func CreateToken(userId interface{}) (string, error) {
+	// Retrieve secret from environment for security. 
 	jwtKey := []byte(os.Getenv("JWT_SECRET"))
 	
+	// Define the payload (Claims). 
+	// Standard 'exp' claim ensures the token is automatically invalid after 24 hours.
 	claims := jwt.MapClaims{
 		"user_id":  userId,
 		"exp":      time.Now().Add(time.Hour * 24).Unix(), // 24-hour expiration
 	}
 
+	// Create the token using the HS256 algorithm (Symmetric signing).
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenString, err := token.SignedString(jwtKey)
 	if err != nil {
@@ -25,13 +32,18 @@ func CreateToken(userId interface{}) (string, error) {
 	}
 
 	return tokenString, nil
-}
-// Put this next to getToken in your shared controller helpers
+} 
+
+
+// getAdminID is a robust helper to extract the user ID from the Gin context.
+// Because JSON and JWT libraries often decode numbers as float64, this function 
+// handles multiple numeric types to prevent type assertion panics.
 func getAdminID(c *gin.Context) int {
     val, exists := c.Get("user_id")
     if !exists {
         return 0
-    }
+    } 
+	// Type switch to safely handle numeric variations coming from the token claims.
     switch v := val.(type) {
     case float64:
         return int(v)
@@ -42,7 +54,8 @@ func getAdminID(c *gin.Context) int {
     default:
         return 0
     }
-}
+} 
+
 // ValidateJWT checks the token signature and expiration
 func ValidateJWT(tokenString string) (*jwt.Token, error) {
 	secretKey := []byte(os.Getenv("JWT_SECRET"))
@@ -61,6 +74,8 @@ func ValidateJWT(tokenString string) (*jwt.Token, error) {
 	return token, nil
 } 
 
+// ExtractClaims unpackages the data stored inside a validated token.
+// Use this to get the "user_id" or "exp" values after calling ValidateJWT.
 func ExtractClaims(token *jwt.Token) (jwt.MapClaims, error) {
 	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
 		return claims, nil

@@ -3,7 +3,7 @@ package Services
 import (
 	"database/sql"
 	"fmt"
-	"invoice-backend/Helper/Utils" // Ensure this matches your path (usually Utils or Helper/Utils)
+	"invoice-backend/Helper/Utils" 
 	"invoice-backend/Models/dto"
 	"invoice-backend/Models/responses"
 	"invoice-backend/Query"
@@ -245,8 +245,6 @@ func GetClientByID(db *sql.DB, clientID int) (responses.ClientDetailsResponse, e
 		return client, err
 	}
 
-	// ✅ Assign nullable values safely
-    // ✅ Assign ALL nullable fields
 
 if email.Valid {
 	client.Email = email.String

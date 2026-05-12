@@ -25,10 +25,7 @@ func Encrypt(data interface{}, encryptStatus bool, token string) interface{} {
 	keyData := os.Getenv("ENCRYPT_API") + token 
 
 	key := sha256.Sum256([]byte(keyData))
-	// Go - temporary debug
-	fmt.Printf("DEBUG key input: %q\n", keyData)	
-	fmt.Printf("DEBUG key hex: %x\n", key)
-
+	
 	// 2. Serialize the data to JSON
 	var plainText []byte
 	bytes, err := json.Marshal(data)

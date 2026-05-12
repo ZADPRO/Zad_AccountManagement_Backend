@@ -5,7 +5,7 @@ import (
 	"database/sql" 
 	"encoding/hex"
 	"fmt"
-	"invoice-backend/Helper/Utils" // Ensure this matches your package path
+	"invoice-backend/Helper/Utils" 
 	"invoice-backend/Models/dto" 
 	"invoice-backend/Models/responses" 
 	"invoice-backend/Query"
@@ -71,7 +71,7 @@ func AddNewUser(db *sql.DB, req dto.CreateUserRequest) (int, error) {
     return 0, fmt.Errorf("database insert failed: %w", err)
 }
 
-    fmt.Printf("DEBUG: user inserted with ID=%d, sending email to %q\n", newID, req.Email)
+   
 
     // 5. Send welcome email — only once, log error but don't fail
     if err := Utils.SendWelcomeEmail(req.Email, tempPassword); err != nil {

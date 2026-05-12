@@ -10,7 +10,7 @@ type LoginRequest struct {
 type LoginResponse struct {
 	BaseResponse
 	Token        string `json:"token"`
-	Role         string `json:"role"`     // Matches React data.role
+	Role         string `json:"role"`     
 	Username     string `json:"name"`
 	IsFirstLogin bool   `json:"isFirstLogin"`
 	UserId       int    `json:"userId"`
