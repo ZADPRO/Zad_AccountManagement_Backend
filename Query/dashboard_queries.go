@@ -3,9 +3,9 @@ package Query
 const (
 	InsertInvoiceHeaderQuery = `
         INSERT INTO invoices (invoicenumber, clientid, invoicedate, grandtotal, paymentstatus, updatedat, updatedby, "CustomValues", invoiceduedate, currency, "bankID",
-    invoicetype)
+    invoicetype, taxamount,  tdsamount)
         VALUES ($1, $2, $3, $4, $5, NOW(), $6, $7::jsonb, $8, $9, $10,
-    $11)
+    $11, $12, $13)
         RETURNING invoiceid;`
 
 	InsertInvoiceItemQuery = `
@@ -29,8 +29,14 @@ VALUES ($1, $2, $3);
             (SELECT COUNT(*) FROM active_clients) as total_clients,
             (SELECT COUNT(*) FROM active_users) as active_users,
             (SELECT COALESCE(SUM(grandtotal), 0) FROM invoices WHERE paymentstatus = 'Paid') as total_revenue,
-            (SELECT COALESCE(SUM(grandtotal), 0) FROM invoices WHERE paymentstatus = 'pending') as pending_amount,
-            (SELECT COUNT(*) FROM invoices WHERE paymentstatus = 'pending') as overdue_count;`
+            (SELECT COALESCE(SUM(grandtotal), 0) 
+            FROM invoices 
+            WHERE paymentstatus = 'pending'
+            AND deletedat IS NULL) as pending_amount,
+            (SELECT COUNT(*) 
+            FROM invoices 
+            WHERE paymentstatus = 'pending'
+            AND deletedat IS NULL) as overdue_count;`
  
         GetInvoiceByIDQuery = `
 SELECT
@@ -45,6 +51,8 @@ SELECT
     i.currency,
     i."bankID",
     i.invoicetype,
+    i.taxamount,
+     i.tdsamount,
 
     b."BankName",
     b."AccountNumber",

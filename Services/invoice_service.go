@@ -49,6 +49,8 @@ func CreateFullInvoice(db *sql.DB, req dto.CreateInvoiceRequest) (int, error) {
 	    req.Currency, 
         req.BankID,
         req.InvoiceType,
+        req.TaxAmount,
+         req.TdsAmount,
     ).Scan(&newInvoiceID)
 
     if err != nil {
@@ -109,6 +111,8 @@ func GetInvoiceByID(db *sql.DB, invoiceID int) (*dto.InvoiceResponse, error) {
         &inv.Currency, 
         &inv.BankID,
         &inv.InvoiceType,
+        &inv.TaxAmount,
+         &inv.TdsAmount,
 
         &inv.InvoiceBankName,
         &inv.InvoiceAccountNumber,

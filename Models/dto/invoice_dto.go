@@ -29,6 +29,8 @@ type CreateInvoiceRequest struct {
 	Currency       string             `json:"currency"` 
 	BankID      int    `json:"bankId"`
 	InvoiceType string `json:"invoiceType"`
+	TaxAmount     float64     `json:"taxamount"`
+	TdsAmount     float64     `json:"tdsamount"`
 }
 type InvoiceResponse struct {
     InvoiceID     int                `json:"invoiceid"`
@@ -43,6 +45,8 @@ type InvoiceResponse struct {
 	Currency       string             `json:"currency"` 
 	BankID      int    `json:"bankId"`
 	InvoiceType string `json:"invoiceType"` 
+	TaxAmount     float64     `json:"taxamount"`
+	TdsAmount     float64     `json:"tdsamount"`
 
 	InvoiceBankName      string `json:"invoiceBankName"`
 	InvoiceAccountNumber string `json:"invoiceAccountNumber"`
