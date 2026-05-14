@@ -3,12 +3,13 @@ package main
 import (
 	"log"
 	"os"
+	"strings"
 
 	"invoice-backend/DB"
 	"invoice-backend/Routes"
 
-	"github.com/gin-gonic/gin"
 	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
 
@@ -30,9 +31,19 @@ func main() {
 
 	// ✅ CORS MUST BE BEFORE ROUTES
 	r.Use(cors.New(cors.Config{
-		AllowOrigins: []string{
-			"http://localhost:5173",
-			"https://zad-account-management.vercel.app",
+		AllowOriginFunc: func(origin string) bool {
+
+			// localhost
+			if origin == "http://localhost:5173" {
+				return true
+			}
+
+			// allow all vercel domains
+			if strings.Contains(origin, "vercel.app") {
+				return true
+			}
+
+			return false
 		},
 		AllowMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders: []string{"Origin", "Content-Type", "Authorization"},
