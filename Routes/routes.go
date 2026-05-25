@@ -6,22 +6,11 @@ import (
 	"invoice-backend/Middleware"
 
 	"github.com/gin-gonic/gin"
+	"fmt"
+	
 )
 
 func SetupRoutes(r *gin.Engine, db *sql.DB) {
-	// --- CORS MIDDLEWARE ---
-	r.Use(func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
-		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
-
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
-			return
-		}
-		c.Next()
-	})
 
 	v1 := r.Group("/api/v1")
 	{
@@ -76,20 +65,29 @@ func SetupRoutes(r *gin.Engine, db *sql.DB) {
 			} 
 
 			bankingRoutes := protected.Group("/banking")
-{
-    bankingRoutes.GET("/current", Controller.GetBankingInfo(db))
+			{
+				bankingRoutes.GET("/current", Controller.GetBankingInfo(db))
+				bankingRoutes.POST("", Controller.CreateBanking(db))       
+				bankingRoutes.PUT("/:id", Controller.UpdateBanking(db))    
+				bankingRoutes.DELETE("/:id", Controller.DeleteBankingInfo(db))
+			}
 
-    bankingRoutes.POST("", Controller.CreateBanking(db))       
-    bankingRoutes.PUT("/:id", Controller.UpdateBanking(db))    
-	bankingRoutes.DELETE("/:id", Controller.DeleteBankingInfo(db))
-}
+			fieldRoutes := protected.Group("/custom-fields")
+			{
+				fieldRoutes.GET("", Controller.GetCustomFieldList(db))
+				fieldRoutes.POST("", Controller.CreateCustomField(db))
+				fmt.Println("CUSTOM FIELD PUT ROUTE LOADED")
+				fieldRoutes.PUT("/:id", Controller.UpdateCustomField(db))
+				fieldRoutes.DELETE("/:id", Controller.DeleteCustomField(db))
+			}
 
-	fieldRoutes := protected.Group("/custom-fields")
-    {
-        fieldRoutes.GET("", Controller.GetCustomFieldList(db))
-        fieldRoutes.POST("", Controller.CreateCustomField(db))
-        fieldRoutes.DELETE("/:id", Controller.DeleteCustomField(db))
-    }
+			signatureRoutes := protected.Group("/signature-authorities")
+			{
+				signatureRoutes.GET("", Controller.GetSignatureAuthorities)
+				signatureRoutes.POST("", Controller.CreateSignatureAuthority)
+				signatureRoutes.PUT("/:id", Controller.UpdateSignatureAuthority)
+				signatureRoutes.DELETE("/:id", Controller.DeleteSignatureAuthority)
+			}
 			// Dashboard Stats
 			protected.GET("/dashboard/summary", Controller.GetDashboardStats(db))
 		}

@@ -21,6 +21,7 @@ type CreateInvoiceRequest struct {
 	ClientID      int           `json:"clientid"`
 	InvoiceDate   string        `json:"invoicedate"` // YYYY-MM-DD
 	GrandTotal    float64       `json:"grandtotal"`
+	SignatureAuthorityID int `json:"signatureauthorityid"`
 	PaymentStatus string        `json:"paymentstatus"`
 	UpdatedBy     int           `json:"updatedby"`
 	Items         []InvoiceItem `json:"items"`
@@ -29,6 +30,9 @@ type CreateInvoiceRequest struct {
 	Currency       string             `json:"currency"` 
 	BankID      int    `json:"bankId"`
 	InvoiceType string `json:"invoiceType"`
+	TaxType string `json:"taxtype"`
+	TaxAmount     float64     `json:"taxamount"`
+	TdsAmount     float64     `json:"tdsamount"`
 }
 type InvoiceResponse struct {
     InvoiceID     int                `json:"invoiceid"`
@@ -42,7 +46,15 @@ type InvoiceResponse struct {
 	InvoiceDueDate string             `json:"invoiceduedate"`
 	Currency       string             `json:"currency"` 
 	BankID      int    `json:"bankId"`
+	SignatureAuthorityID   int    `json:"signatureAuthorityId"`
+	SignatureAuthorityName string `json:"signatureAuthorityName"`
+	SignatureAuthorityRole string `json:"signatureAuthorityRole"`
+	SignatureContactNumber string `json:"signatureContactNumber"`
+	SignatureEmail         string `json:"signatureEmail"`
 	InvoiceType string `json:"invoiceType"` 
+	TaxType string `json:"taxtype"`
+	TaxAmount     float64     `json:"taxamount"`
+	TdsAmount     float64     `json:"tdsamount"`
 
 	InvoiceBankName      string `json:"invoiceBankName"`
 	InvoiceAccountNumber string `json:"invoiceAccountNumber"`
