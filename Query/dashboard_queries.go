@@ -1,22 +1,54 @@
 package Query
 
 const (
-	InsertInvoiceHeaderQuery = `
-        INSERT INTO invoices (invoicenumber, clientid, invoicedate, grandtotal, paymentstatus, updatedat, updatedby, "CustomValues", invoiceduedate, currency, "bankID",
-    invoicetype, taxamount,  tdsamount)
-        VALUES ($1, $2, $3, $4, $5, NOW(), $6, $7::jsonb, $8, $9, $10,
-    $11, $12, $13)
-        RETURNING invoiceid;`
 
-	InsertInvoiceItemQuery = `
-        INSERT INTO invoiceitems (invoiceid, description, quantity, unitprice, linetotal, updatedat, updatedby,custom_field_values)
-        VALUES ($1, $2, $3, $4, $5, NOW(), $6,$7);`
+    InsertInvoiceHeaderQuery = `
+        INSERT INTO invoices (
+            invoicenumber,
+            clientid,
+            invoicedate,
+            grandtotal,
+            paymentstatus,
+            updatedat,
+            updatedby,
+            "CustomValues",
+            invoiceduedate,
+            currency,
+            "bankID",
+            signature_authority_id,
+            invoicetype,
+            taxtype,
+            taxamount,
+            tdsamount
+        )
+        VALUES (
+            $1, $2, $3, $4, $5,
+            NOW(), $6, $7,
+            $8, $9, $10,
+            $11,
+            $12, $13, $14, $15
+        )
+        RETURNING invoiceid;
+    `
 
-    InsertInvoiceCustomFieldQuery = `
-INSERT INTO "InvoiceCustomFieldValues"
-("InvoiceID", "FieldID", "Value")
-VALUES ($1, $2, $3);
+    InsertInvoiceItemQuery = `
+        INSERT INTO invoiceitems (
+            invoiceid,
+            description,
+            quantity,
+            unitprice,
+            linetotal,
+            updatedat,
+            updatedby,
+            custom_field_values
+        )
+        VALUES (
+            $1, $2, $3, $4, $5,
+            NOW(), $6, $7
+        );
+    
 `
+
 
 	GetInvoiceListQuery = `
         SELECT i.invoiceid, i.invoicenumber, c."name", i.invoicedate, i.grandtotal, i.paymentstatus 
@@ -51,8 +83,15 @@ SELECT
     i.currency,
     i."bankID",
     i.invoicetype,
+    i.taxtype,
     i.taxamount,
-     i.tdsamount,
+    i.tdsamount,
+    i.signature_authority_id,
+
+    sa.name AS signature_authority_name,
+    sa.designation AS signature_authority_role,
+    sa.contact_number,
+    sa.email,
 
     b."BankName",
     b."AccountNumber",
@@ -66,6 +105,9 @@ FROM invoices i
 
 LEFT JOIN "BankingDetails" b
 ON i."bankID" = b."DetailsID"
+
+LEFT JOIN signature_authorities sa
+ON sa.id = i.signature_authority_id
 
 WHERE i.invoiceid = $1;
 `
