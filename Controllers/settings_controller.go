@@ -4,6 +4,8 @@ import (
     "database/sql"
     "encoding/json" 
     "net/http"
+
+	"fmt"
     
     "invoice-backend/Models/dto"
     "invoice-backend/Services"
@@ -256,6 +258,93 @@ func GetCustomFieldList(db *sql.DB) gin.HandlerFunc {
         // 3. ENCRYPT the whole list for the network handshake
         c.JSON(http.StatusOK, hashapi.Encrypt(resp, true, token))
     }
+}
+
+func UpdateCustomField(db *sql.DB) gin.HandlerFunc {
+
+	return func(c *gin.Context) {
+
+		token := getToken(c)
+
+		idStr := c.Param("id")
+		fieldID, _ := strconv.Atoi(idStr)
+
+		var packet dto.EncryptedPacket
+
+		if err := c.ShouldBindJSON(&packet); err != nil {
+
+			c.JSON(http.StatusBadRequest,
+				hashapi.Encrypt(gin.H{
+					"status": false,
+					"message": "Invalid request packet",
+				}, true, token),
+			)
+
+			return
+		}
+
+		decrypted, err := hashapi.Decrypt(packet.Data, token)
+
+		if err != nil {
+
+			c.JSON(http.StatusUnauthorized,
+				hashapi.Encrypt(gin.H{
+					"status": false,
+					"message": "Decryption failed",
+				}, true, token),
+			)
+
+			return
+		}
+
+		var body struct {
+			FieldLabel string `json:"fieldLabel"`
+			FieldType  string `json:"fieldType"`
+			IsRequired bool   `json:"isRequired"`
+		}
+
+		jsonBytes, _ := json.Marshal(decrypted)
+		json.Unmarshal(jsonBytes, &body)
+
+		query := `
+			UPDATE "CustomFieldDefinitions"
+			SET "FieldLabel" = $1,
+				"FieldType" = $2,
+				"IsRequired" = $3
+			WHERE "FieldID" = $4
+		`
+
+		_, err = db.ExecContext(
+			c,
+            query,
+			body.FieldLabel,
+			body.FieldType,
+			body.IsRequired,
+			fieldID,
+		)
+
+		if err != nil {
+
+			fmt.Println("UPDATE ERROR:", err)
+
+			c.JSON(http.StatusInternalServerError,
+				hashapi.Encrypt(gin.H{
+					"status": false,
+					"message": err.Error(),
+				}, true, token),
+			)
+
+			return
+		}
+
+		c.JSON(http.StatusOK,
+			hashapi.Encrypt(gin.H{
+				"status": true,
+				"id": fieldID,
+				"message": "Field updated successfully",
+			}, true, token),
+		)
+	}
 }
 
 // DeleteCustomField handles the ID and encrypts the status response

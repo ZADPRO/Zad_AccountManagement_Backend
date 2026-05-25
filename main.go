@@ -27,6 +27,8 @@ func main() {
 	}
 	defer sqlDB.Close()
 
+	gin.SetMode(gin.ReleaseMode)
+
 	r := gin.Default()
 
 	// ✅ CORS MUST BE BEFORE ROUTES

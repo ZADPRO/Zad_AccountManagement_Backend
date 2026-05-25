@@ -7,6 +7,7 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
+	"gorm.io/gorm/logger"
 )
 
 var db *gorm.DB
@@ -23,14 +24,25 @@ func InitDB() *gorm.DB {
 	port := os.Getenv("DB_PORT")
 	sslmode := os.Getenv("DB_SSLMODE")
 
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s",
-		host, user, password, dbname, port, sslmode)
+	dsn := fmt.Sprintf(
+	"host=%s user=%s password=%s dbname=%s port=%s sslmode=%s binary_parameters=yes",
+		host,	
+		user,
+		password,
+		dbname,
+		port,
+		sslmode,
+	)
 
 	// Open GORM connection with custom naming strategy
-	db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{
+	db, err = gorm.Open(postgres.New(postgres.Config{
+		DSN:                  dsn,
+		PreferSimpleProtocol: true,
+	}), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Silent),
 		NamingStrategy: schema.NamingStrategy{
-			TablePrefix:   "",    
-			SingularTable: true, 
+			TablePrefix:   "",
+			SingularTable: true,
 		},
 	})
 

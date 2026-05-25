@@ -6,6 +6,8 @@ import (
 	"invoice-backend/Middleware"
 
 	"github.com/gin-gonic/gin"
+	"fmt"
+	
 )
 
 func SetupRoutes(r *gin.Engine, db *sql.DB) {
@@ -74,7 +76,17 @@ func SetupRoutes(r *gin.Engine, db *sql.DB) {
 			{
 				fieldRoutes.GET("", Controller.GetCustomFieldList(db))
 				fieldRoutes.POST("", Controller.CreateCustomField(db))
+				fmt.Println("CUSTOM FIELD PUT ROUTE LOADED")
+				fieldRoutes.PUT("/:id", Controller.UpdateCustomField(db))
 				fieldRoutes.DELETE("/:id", Controller.DeleteCustomField(db))
+			}
+
+			signatureRoutes := protected.Group("/signature-authorities")
+			{
+				signatureRoutes.GET("", Controller.GetSignatureAuthorities)
+				signatureRoutes.POST("", Controller.CreateSignatureAuthority)
+				signatureRoutes.PUT("/:id", Controller.UpdateSignatureAuthority)
+				signatureRoutes.DELETE("/:id", Controller.DeleteSignatureAuthority)
 			}
 			// Dashboard Stats
 			protected.GET("/dashboard/summary", Controller.GetDashboardStats(db))

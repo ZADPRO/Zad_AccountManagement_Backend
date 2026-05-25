@@ -36,6 +36,8 @@ func CreateFullInvoice(db *sql.DB, req dto.CreateInvoiceRequest) (int, error) {
 
     // ✅ Insert invoice header
     var newInvoiceID int
+
+    fmt.Println("TAX TYPE:", req.TaxType)
     err = tx.QueryRow(
         Query.InsertInvoiceHeaderQuery,
         req.InvoiceNumber,
@@ -44,13 +46,15 @@ func CreateFullInvoice(db *sql.DB, req dto.CreateInvoiceRequest) (int, error) {
         req.GrandTotal,
         req.PaymentStatus,
         req.UpdatedBy,
-        customJSON,
+        string(customJSON),
         req.InvoiceDueDate,
 	    req.Currency, 
         req.BankID,
+        req.SignatureAuthorityID,
         req.InvoiceType,
+        req.TaxType,
         req.TaxAmount,
-         req.TdsAmount,
+        req.TdsAmount,
     ).Scan(&newInvoiceID)
 
     if err != nil {
@@ -73,7 +77,7 @@ func CreateFullInvoice(db *sql.DB, req dto.CreateInvoiceRequest) (int, error) {
             item.UnitPrice,
             item.LineTotal,
             req.UpdatedBy,
-            itemCustomJSON,
+            string(itemCustomJSON),
         )
 
         if err != nil {
@@ -95,10 +99,20 @@ func GetInvoiceByID(db *sql.DB, invoiceID int) (*dto.InvoiceResponse, error) {
     var inv dto.InvoiceResponse
     var clientID int
     var customJSON []byte 
-    // 🔐 Decrypt Bank Details 
     
+    // 1. Declare Nullable variables for ALL potentially missing fields
+    var (
+        bankID                                                        sql.NullInt64
+        sigAuthID                                                     sql.NullInt64
+        sigName, sigRole, sigContact, sigEmail                        sql.NullString
+        bankName, accNum, ifsc, bankAddr, logoUrl, accType, swiftCode sql.NullString
+        
+        // Fields that might be NULL in older invoices
+        invDueDate, curr, invType, txType                             sql.NullString
+        txAmount, tdsAmt                                              sql.NullFloat64
+    )
 
-    // 1. Fetch invoice header
+    // 2. Fetch invoice header safely
     err := db.QueryRow(Query.GetInvoiceByIDQuery, invoiceID).Scan(
         &inv.InvoiceID,
         &inv.InvoiceNumber,
@@ -107,64 +121,89 @@ func GetInvoiceByID(db *sql.DB, invoiceID int) (*dto.InvoiceResponse, error) {
         &inv.PaymentStatus,
         &clientID,
         &customJSON,
-        &inv.InvoiceDueDate,
-        &inv.Currency, 
-        &inv.BankID,
-        &inv.InvoiceType,
-        &inv.TaxAmount,
-         &inv.TdsAmount,
-
-        &inv.InvoiceBankName,
-        &inv.InvoiceAccountNumber,
-        &inv.InvoiceIFSCCode,
-        &inv.InvoiceBankAddress,
-        &inv.InvoiceQRCodeURL,
-        &inv.InvoiceAccountType,
-        &inv.InvoiceSwiftCode,
+        &invDueDate,  // Mapped to i.invoiceduedate
+        &curr,        // Mapped to i.currency
+        &bankID,      // Mapped to i.bankID
+        &invType,     // Mapped to i.invoicetype
+        &txType,      // Mapped to i.taxtype
+        &txAmount,    // Mapped to i.taxamount
+        &tdsAmt,      // Mapped to i.tdsamount
+        &sigAuthID,
+        &sigName,
+        &sigRole,
+        &sigContact,
+        &sigEmail,
+        &bankName,
+        &accNum,
+        &ifsc,
+        &bankAddr,
+        &logoUrl,
+        &accType,
+        &swiftCode,
     )
-    
+
+    // 🚨 IF IT FAILS HERE, CHECK YOUR TERMINAL
     if err != nil {
-        return nil, fmt.Errorf("invoice not found: %w", err)
+        fmt.Println("🚨 DATABASE HEADER SCAN ERROR:", err) 
+        return nil, fmt.Errorf("invoice not found or scan error: %w", err)
     }
-    if inv.InvoiceAccountNumber != "" {
-    decryptedAcc, err := Utils.DecryptFromDB(inv.InvoiceAccountNumber)
-    if err == nil {
-        inv.InvoiceAccountNumber = decryptedAcc
-    } else {
-        fmt.Println("Account Number decrypt error:", err)
-    }
-}
 
-if inv.InvoiceIFSCCode != "" {
-    decryptedIFSC, err := Utils.DecryptFromDB(inv.InvoiceIFSCCode)
-    if err == nil {
-        inv.InvoiceIFSCCode = decryptedIFSC
-    } else {
-        fmt.Println("IFSC decrypt error:", err)
-    }
-}
-
-if inv.InvoiceSwiftCode != "" {
-    decryptedSwift, err := Utils.DecryptFromDB(inv.InvoiceSwiftCode)
-    if err == nil {
-        inv.InvoiceSwiftCode = decryptedSwift
-    } else {
-        fmt.Println("SWIFT decrypt error:", err)
-    }
-}
-   if len(customJSON) > 0 {
-    fmt.Println("CUSTOM JSON:", string(customJSON))
+    // 3. Map valid nullable values back to struct
+    if invDueDate.Valid { inv.InvoiceDueDate = invDueDate.String }
+    if curr.Valid { inv.Currency = curr.String }
+    if invType.Valid { inv.InvoiceType = invType.String }
+    if txType.Valid { inv.TaxType = txType.String }
+    if txAmount.Valid { inv.TaxAmount = txAmount.Float64 }
+    if tdsAmt.Valid { inv.TdsAmount = tdsAmt.Float64 }
+    if bankID.Valid { inv.BankID = int(bankID.Int64) }
     
-    inv.CustomValues = []dto.CustomFieldValue{}
+    if sigAuthID.Valid { inv.SignatureAuthorityID = int(sigAuthID.Int64) }
+    if sigName.Valid { inv.SignatureAuthorityName = sigName.String }
+    if sigRole.Valid { inv.SignatureAuthorityRole = sigRole.String }
+    if sigContact.Valid { inv.SignatureContactNumber = sigContact.String }
+    if sigEmail.Valid { inv.SignatureEmail = sigEmail.String }
 
-  if len(customJSON) > 0 && string(customJSON) != "[]" {
-    if err := json.Unmarshal(customJSON, &inv.CustomValues); err != nil {
-        fmt.Println("JSON UNMARSHAL ERROR:", err)
-        // Don't kill the whole request just for custom fields, just log it
+    if bankName.Valid { inv.InvoiceBankName = bankName.String }
+    if accNum.Valid { inv.InvoiceAccountNumber = accNum.String }
+    if ifsc.Valid { inv.InvoiceIFSCCode = ifsc.String }
+    if bankAddr.Valid { inv.InvoiceBankAddress = bankAddr.String }
+    if logoUrl.Valid { inv.InvoiceQRCodeURL = logoUrl.String }
+    if accType.Valid { inv.InvoiceAccountType = accType.String }
+    if swiftCode.Valid { inv.InvoiceSwiftCode = swiftCode.String }
+
+    // 4. Decrypt Bank Details
+    if inv.InvoiceAccountNumber != "" {
+        decryptedAcc, err := Utils.DecryptFromDB(inv.InvoiceAccountNumber)
+        if err == nil {
+            inv.InvoiceAccountNumber = decryptedAcc
+        }
     }
-}
-   }
-    // 2. Fetch client
+
+    if inv.InvoiceIFSCCode != "" {
+        decryptedIFSC, err := Utils.DecryptFromDB(inv.InvoiceIFSCCode)
+        if err == nil {
+            inv.InvoiceIFSCCode = decryptedIFSC
+        }
+    }
+
+    if inv.InvoiceSwiftCode != "" {
+        decryptedSwift, err := Utils.DecryptFromDB(inv.InvoiceSwiftCode)
+        if err == nil {
+            inv.InvoiceSwiftCode = decryptedSwift
+        }
+    }
+
+    // 5. Handle Custom JSON
+    if len(customJSON) > 0 {
+        inv.CustomValues = []dto.CustomFieldValue{}
+        if string(customJSON) != "[]" {
+            if err := json.Unmarshal(customJSON, &inv.CustomValues); err != nil {
+                fmt.Println("JSON UNMARSHAL ERROR:", err)
+            }
+        }
+    }
+
+    // 6. Fetch client
     var supplyTypeID, updatedBy int
     var isActive bool
     var updatedAt time.Time
@@ -173,6 +212,7 @@ if inv.InvoiceSwiftCode != "" {
     var gstNumber sql.NullString
     var pan sql.NullString
     var stateName sql.NullString
+    var email, primaryNum, registeredAddr, country, billingAddr, gstStatus sql.NullString // Just in case
     
     err = db.QueryRow(Query.GetClientByIDQuery, clientID).Scan(
         &inv.Client.ClientID,
@@ -184,68 +224,70 @@ if inv.InvoiceSwiftCode != "" {
         &inv.Client.ClientType,
         &updatedAt,
         &updatedBy,
-        &inv.Client.Email,
-        &inv.Client.PrimaryNumber,
-        &inv.Client.Address,
-        &inv.Client.CountryName,
+        &email,            // Was &inv.Client.Email
+        &primaryNum,       // Was &inv.Client.PrimaryNumber
+        &registeredAddr,   // Was &inv.Client.Address
+        &country,          // Was &inv.Client.CountryName
         &stateName,
         &zip,
-        &inv.Client.BillingAddress,
+        &billingAddr,      // Was &inv.Client.BillingAddress
         &billingCountryID,
         &billingStateID,
         &inv.Client.TaxPercentage,
         &gstNumber,
         &pan,
         &inv.Client.IsExport,
-        &inv.Client.GSTStatus,
+        &gstStatus,        // Was &inv.Client.GSTStatus
         &inv.Client.BillingCountry,
         &inv.Client.BillingState,
     )
+    
+    //  IF IT FAILS HERE, CHECK YOUR TERMINAL
     if err != nil {
+        fmt.Println("CLIENT SCAN ERROR:", err)
         return nil, fmt.Errorf("client not found: %w", err)
     }
-    if zip.Valid {
-    inv.Client.ZIP = int(zip.Int64)
-}
-    if gstNumber.Valid {
-    inv.Client.GSTNumber = gstNumber.String
-}
 
-if pan.Valid {
-    inv.Client.PAN = pan.String
-}
+    // Safely map client strings
+    if email.Valid { inv.Client.Email = email.String }
+    if primaryNum.Valid { inv.Client.PrimaryNumber = primaryNum.String }
+    if registeredAddr.Valid { inv.Client.Address = registeredAddr.String }
+    if country.Valid { inv.Client.CountryName = country.String }
+    if billingAddr.Valid { inv.Client.BillingAddress = billingAddr.String }
+    if gstStatus.Valid { inv.Client.GSTStatus = gstStatus.String }
 
-// ✅ Decrypt GST Number
-if inv.Client.GSTNumber != "" {
-    decryptedGST, decErr := Utils.DecryptFromDB(inv.Client.GSTNumber)
-    if decErr == nil {
-        inv.Client.GSTNumber = decryptedGST
-    } else {
-        fmt.Println("GST decrypt error:", decErr)
+    if zip.Valid { inv.Client.ZIP = int(zip.Int64) }
+    if gstNumber.Valid { inv.Client.GSTNumber = gstNumber.String }
+    if pan.Valid { inv.Client.PAN = pan.String }
+
+    // Decrypt GST Number
+    if inv.Client.GSTNumber != "" {
+        decryptedGST, decErr := Utils.DecryptFromDB(inv.Client.GSTNumber)
+        if decErr == nil {
+            inv.Client.GSTNumber = decryptedGST
+        }
     }
-}
 
-// ✅ Decrypt PAN
-if inv.Client.PAN != "" {
-    decryptedPAN, decErr := Utils.DecryptFromDB(inv.Client.PAN)
-    if decErr == nil {
-        inv.Client.PAN = decryptedPAN
-    } else {
-        fmt.Println("PAN decrypt error:", decErr)
+    // Decrypt PAN
+    if inv.Client.PAN != "" {
+        decryptedPAN, decErr := Utils.DecryptFromDB(inv.Client.PAN)
+        if decErr == nil {
+            inv.Client.PAN = decryptedPAN
+        }
     }
-}
 
-    // 3. Fetch line items ✅ FIXED
+    // 7. Fetch line items
     rows, err := db.Query(Query.GetInvoiceItemsByInvoiceIDQuery, invoiceID)
     if err != nil {
+        fmt.Println("_ITEMS FETCH ERROR:", err)
         return nil, fmt.Errorf("items fetch error: %w", err)
     }
     defer rows.Close()
     
     for rows.Next() {
-        
         var item dto.InvoiceItem
         var itemCustomJSON []byte
+        
         err := rows.Scan(
             &item.ItemID,
             &item.Description,
@@ -254,24 +296,26 @@ if inv.Client.PAN != "" {
             &item.LineTotal,
             &itemCustomJSON,
         )
-         if err != nil {
-        return nil, fmt.Errorf("item scan error: %w", err)
-    }
-    if len(itemCustomJSON) > 0 && string(itemCustomJSON) != "[]" {
-        err := json.Unmarshal(itemCustomJSON, &item.CustomFieldValues)
+        
+        //  IF IT FAILS HERE, CHECK YOUR TERMINAL
         if err != nil {
-            fmt.Println("item custom JSON error:", err)
-        }
-    }
-
-    inv.Items = append(inv.Items, item)
-        if err != nil {
+            fmt.Println("ITEM ROW SCAN ERROR:", err)
             return nil, fmt.Errorf("item scan error: %w", err)
         }
-    
+
+        if len(itemCustomJSON) > 0 && string(itemCustomJSON) != "[]" {
+            err := json.Unmarshal(itemCustomJSON, &item.CustomFieldValues)
+            if err != nil {
+                fmt.Println("item custom JSON error:", err)
+            }
+        }
+
+        inv.Items = append(inv.Items, item)
     }
+
     return &inv, nil
 }
+
 func DeleteInvoice(db *sql.DB, invoiceID int, adminID int) error {
 
 	// 1. Soft delete invoice items
