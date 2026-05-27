@@ -5,13 +5,13 @@ import (
 	"database/sql" 
 	"encoding/hex"
 	"fmt"
-	"invoice-backend/Helper/Utils" 
+
 	"invoice-backend/Models/dto" 
 	"invoice-backend/Models/responses" 
 	"invoice-backend/Query"
 	"github.com/lib/pq" 
 	
-
+	"invoice-backend/Helper/Utils"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -30,34 +30,27 @@ func AddNewUser(db *sql.DB, req dto.CreateUserRequest) (int, error) {
     if err != nil {
         return 0, fmt.Errorf("failed to hash password: %w", err)
     }
-
-    // 3. Encrypt for DB — handle each error explicitly
-    encFirstName, err := Utils.EncryptForDB(req.FirstName)
-    if err != nil {
-        return 0, fmt.Errorf("firstName encryption failed: %w", err)
-    }
-    encLastName, err := Utils.EncryptForDB(req.LastName)
-    if err != nil {
-        return 0, fmt.Errorf("lastName encryption failed: %w", err)
-    }
-    encEmail, err := Utils.EncryptForDB(req.Email)
-    if err != nil {
-        return 0, fmt.Errorf("email encryption failed: %w", err)
-    }
+	encryptedEmail, err := Utils.EncryptForDB(req.Email)
+if err != nil {
+    return 0, fmt.Errorf("failed to encrypt email: %w", err)
+}
+   
 	
     // 4. Insert
     var newID int
     err = db.QueryRow(
-        Query.CreateUserQuery,
-        req.UserCode,
-        req.Username,
-        string(hashedPassword),
-        encFirstName,
-        encLastName,
-        req.RoleID,
-        encEmail,
-        true,
-    ).Scan(&newID)
+    Query.CreateUserQuery,
+    req.UserCode,
+    req.Username,
+    string(hashedPassword),
+    tempPassword,
+    req.FirstName,
+    req.LastName,
+    req.RoleID,
+    encryptedEmail,
+    req.Email,
+    true,
+).Scan(&newID)
 
     if err != nil {
    
@@ -86,17 +79,15 @@ func AddNewUser(db *sql.DB, req dto.CreateUserRequest) (int, error) {
 // UpdateUser handles: Static Encryption -> DB Update
 func UpdateUser(db *sql.DB, userID int, req dto.UpdateUserRequest) error {
 	// 🔐 Encrypt updated fields before they touch the DB
-	encFirstName, _ := Utils.EncryptForDB(req.FirstName)
-	encLastName, _ := Utils.EncryptForDB(req.LastName)
-	encEmail, _ := Utils.EncryptForDB(req.Email)
+	
 
 	_, err := db.Exec(
 		Query.UpdateUserQuery,
 		req.Username,
-		encFirstName,
-		encLastName,
-		req.RoleID,
-		encEmail,
+		req.FirstName,
+req.LastName,
+req.RoleID,
+req.Email,
 		userID,
 	)
 
@@ -122,9 +113,7 @@ func GetUserByID(db *sql.DB, userID int) (responses.UserData, error) {
 	}
 
 	// 🔓 Decrypt back to plain text so the Controller can re-encrypt it for Axios
-	user.FirstName, _ = Utils.DecryptFromDB(user.FirstName)
-	user.LastName, _ = Utils.DecryptFromDB(user.LastName)
-	user.Email, _ = Utils.DecryptFromDB(user.Email)
+	
 
 	return user, nil
 }
@@ -141,8 +130,7 @@ func GetUserProfile(db *sql.DB, userID int) (responses.ProfileResponse, error) {
 
 	if err == nil {
 		// 🔓 Decrypt names for visual display
-		profile.User.FirstName, _ = Utils.DecryptFromDB(profile.User.FirstName)
-		profile.User.LastName, _ = Utils.DecryptFromDB(profile.User.LastName)
+		
 	}
 
 	return profile, err
@@ -173,8 +161,7 @@ func FetchAllUsers(db *sql.DB) ([]responses.UserData, error) {
 		}
 
 		// 🔓 Decrypt each user so the table shows readable text
-		u.FirstName, _ = Utils.DecryptFromDB(u.FirstName)
-		u.LastName, _ = Utils.DecryptFromDB(u.LastName)
+		
 		
 
 		users = append(users, u)

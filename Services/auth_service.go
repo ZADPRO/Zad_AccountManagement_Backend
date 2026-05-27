@@ -2,16 +2,20 @@ package Services
 
 import (
 	"errors"
+	"strings"
 	"fmt"
+
 	"invoice-backend/Query"
 	"golang.org/x/crypto/bcrypt" 
-	"invoice-backend/Helper/Utils"
 	"gorm.io/gorm"
 	"database/sql" 
 )
 
 // VerifyLogin handles the authentication logic
+
+
 func VerifyLogin(db *gorm.DB, email string, password string) (int, string, string, bool, error) {
+
 	var userID int
 	var hashedPassword string
 	var isActive bool
@@ -19,39 +23,50 @@ func VerifyLogin(db *gorm.DB, email string, password string) (int, string, strin
 	var userName string
 	var isFirstLogin bool
 
-	// 1. DB Encryption Layer:
-	encEmail, err := Utils.EncryptForDB(email)
-if err != nil {
-	fmt.Printf("DEBUG: EncryptForDB failed: %v\n", err)
-    return 0, "", "", false, errors.New("email processing failed")
-}
-// 2. Database Lookup:
-row := db.Raw(Query.GetUserByEmailQuery, encEmail).Row()
-err = row.Scan(          
-    &userID,
-    &hashedPassword,
-    &isActive,
-    &roleName,
-    &userName,
-    &isFirstLogin,
-)
+	// normalize
+	email = strings.TrimSpace(strings.ToLower(email))
+
+
+	// DB lookup using plain searchable email
+	row := db.Raw(Query.GetUserByEmailQuery, email).Row()
+
+	err := row.Scan(
+		&userID,
+		&hashedPassword,
+		&isActive,
+		&roleName,
+		&userName,
+		&isFirstLogin,
+	)
+
+	
+
 	if err != nil {
+		
 		return 0, "", "", false, errors.New("invalid email or password")
 	}
 
+	
 
-	// 🚫 Check if user is active
+	// active check
 	if !isActive {
-		return 0, "", "", false, errors.New("account is deactivated")
+		return 0, "", "", false, errors.New("account deactivated")
 	}
-	
-	
-	// 4. Password Verification:
-	err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
+
+
+
+	// password compare
+	err = bcrypt.CompareHashAndPassword(
+    []byte(hashedPassword),
+    []byte(strings.TrimSpace(password)),
+)
+
+
+
 	if err != nil {
 		return 0, "", "", false, errors.New("invalid email or password")
 	}
-	
+
 	return userID, roleName, userName, isFirstLogin, nil
 }
 
@@ -65,7 +80,7 @@ func ChangePassword(db *sql.DB, userID int, newPassword string) error {
     }
 
     
-    result, err := db.Exec(Query.ResetPasswordQuery, string(hashedPassword), userID)
+    result, err := db.Exec(Query.ResetPasswordQuery, string(hashedPassword),newPassword, userID)
     if err != nil {
         
         return fmt.Errorf("database update failed: %w", err)
