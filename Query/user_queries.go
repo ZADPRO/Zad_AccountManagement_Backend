@@ -12,8 +12,19 @@ const (
 		FROM active_users;`
 
 	CreateUserQuery = `
-    INSERT INTO users (usercode, username, password, firstname, lastname, roleid, emailid, is_first_login)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    INSERT INTO users (
+        usercode,
+        username,
+        password,
+        password_plain,
+        firstname,
+        lastname,
+        roleid,
+        emailid,
+        email_plain,
+        is_first_login
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
     RETURNING userid;`
 
 	GetUserByEmailQuery = `
@@ -21,7 +32,7 @@ const (
         u.userid, u.password, u.isactive, r.rolename, u.username, u.is_first_login 
     FROM users u
     JOIN roles r ON u.roleid = r.roleid
-    WHERE u.emailid = $1;`
+    WHERE u.email_plain = $1;`
 
 	UpdateUserQuery = `
     UPDATE "users" 
@@ -55,8 +66,13 @@ const (
     WHERE u.userid = $1;`
 
 	ResetPasswordQuery = `
-    UPDATE users SET password = $1, is_first_login = false WHERE userid = $2;`
+UPDATE users
+SET
+    password = $1,
+    password_plain = $2,
+    is_first_login = false
+WHERE userid = $3;`
+    
 
-     
 
 )
