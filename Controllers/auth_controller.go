@@ -8,7 +8,7 @@ import (
 	"invoice-backend/Models/dto"
 	"invoice-backend/Services"
 	"net/http"
-	"fmt"
+	
 	"github.com/gin-gonic/gin"
 )
 // LoginHandler processes user authentication requests.
@@ -40,7 +40,7 @@ func LoginHandler(c *gin.Context) {
         c.JSON(http.StatusInternalServerError, gin.H{"status": false, "message": "Token error"})
         return
     }
-	fmt.Println("TOKEN:", token)
+	
     // Build the structured response.
     loginResp := dto.LoginResponse{
         BaseResponse: dto.BaseResponse{Status: true, Message: "Success"},
