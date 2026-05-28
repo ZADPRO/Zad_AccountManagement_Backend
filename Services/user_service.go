@@ -78,16 +78,20 @@ if err != nil {
 
 // UpdateUser handles: Static Encryption -> DB Update
 func UpdateUser(db *sql.DB, userID int, req dto.UpdateUserRequest) error {
-	// 🔐 Encrypt updated fields before they touch the DB
-	
 
-	_, err := db.Exec(
+	encryptedEmail, err := Utils.EncryptForDB(req.Email)
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec(
 		Query.UpdateUserQuery,
 		req.Username,
 		req.FirstName,
-req.LastName,
-req.RoleID,
-req.Email,
+		req.LastName,
+		req.RoleID,
+		encryptedEmail,
+		req.Email,
 		userID,
 	)
 
@@ -112,7 +116,7 @@ func GetUserByID(db *sql.DB, userID int) (responses.UserData, error) {
 		return user, err
 	}
 
-	// 🔓 Decrypt back to plain text so the Controller can re-encrypt it for Axios
+	fmt.Println("GET USER SUCCESS:", user)
 	
 
 	return user, nil
@@ -148,14 +152,14 @@ func FetchAllUsers(db *sql.DB) ([]responses.UserData, error) {
 	for rows.Next() {
 		var u responses.UserData
 		err := rows.Scan(
-			&u.UserID,
-			&u.UserCode,
-			&u.Username,
-			&u.FirstName,
-			&u.LastName,
-			&u.RoleID,
-			
-		)
+	&u.UserID,
+	&u.UserCode,
+	&u.Username,
+	&u.FirstName,
+	&u.LastName,
+	&u.RoleID,
+	&u.Email,
+)
 		if err != nil {
 			return nil, err
 		}
@@ -172,15 +176,19 @@ func FetchAllUsers(db *sql.DB) ([]responses.UserData, error) {
 
 // UpdateUserPassword handles the force-reset logic
 func UpdateUserPassword(db *sql.DB, userID int, newPassword string) error {
+
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
 	if err != nil {
 		return err
 	}
 
-	// Note: We also flip is_first_login to 0/false here
-	query := `UPDATE users SET password = $1, is_first_login = 0, updatedat = NOW() WHERE user_id = $2`
-	
-	_, err = db.Exec(query, string(hashedPassword), userID)
+	_, err = db.Exec(
+		Query.ResetPasswordQuery,
+		string(hashedPassword),
+		newPassword,
+		userID,
+	)
+
 	return err
 }
 

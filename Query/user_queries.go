@@ -2,14 +2,16 @@ package Query
 
 const (
 	GetAllUsersQuery = `
-		SELECT 
-			"userid", 
-			"usercode", 
-			"username", 
-			COALESCE("firstname", '') AS "firstname", 
-			COALESCE("lastname", '') AS "lastname", 
-			"roleid" 
-		FROM active_users;`
+	SELECT 
+		"userid", 
+		"usercode", 
+		"username", 
+		COALESCE("firstname", '') AS "firstname", 
+		COALESCE("lastname", '') AS "lastname", 
+		"roleid",
+		COALESCE("email_plain", '') AS "email"
+	FROM users
+WHERE isactive = true;`
 
 	CreateUserQuery = `
     INSERT INTO users (
@@ -42,8 +44,9 @@ const (
         "lastname" = $3, 
         "roleid" = $4,
         "emailid" = $5,
+        "email_plain" = $6,
         "updatedat" = NOW()
-    WHERE "userid" = $6;
+    WHERE "userid" = $7;
 `
 
 	DeleteUserQuery = `
@@ -55,9 +58,18 @@ const (
     WHERE "userid" = $2;`
 
 	GetUserByIDQuery = `
-    SELECT userid, usercode, username, firstname, lastname, roleid, emailid
-    FROM active_users 
-    WHERE userid = $1 LIMIT 1;`
+SELECT 
+    userid,
+    usercode,
+    username,
+    firstname,
+    lastname,
+    roleid,
+    email_plain
+FROM users
+WHERE userid = $1
+AND isactive = true
+LIMIT 1;`
 
 	GetUserProfileByIDQuery = `
     SELECT u.firstname, u.lastname, r.rolename 
@@ -73,6 +85,4 @@ SET
     is_first_login = false
 WHERE userid = $3;`
     
-
-
 )
