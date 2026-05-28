@@ -54,20 +54,32 @@ func SendPasswordResetEmail(userEmail, resetToken string) error {
 }
 
 // SendWelcomeEmail sends the temporary login credentials to new users
+// SendWelcomeEmail sends the temporary login credentials to new users
 func SendWelcomeEmail(userEmail, tempPassword string) error {
+
+	fmt.Println("========== SENDWELCOMEEMAIL START ==========")
+
 	from := os.Getenv("SMTP_EMAIL")
 	pass := os.Getenv("SMTP_APP_PASSWORD")
 	smtpHost := "smtp.gmail.com"
-	
-	
+
+	fmt.Println("SMTP EMAIL:", from)
+	fmt.Println("SMTP PASSWORD EXISTS:", pass != "")
+
 	smtpPort, _ := strconv.Atoi(os.Getenv("SMTP_PORT"))
-	
-	
+
 	if smtpPort == 0 {
 		smtpPort = 587
 	}
 
+	fmt.Println("SMTP PORT:", smtpPort)
+	fmt.Println("TO EMAIL:", userEmail)
+	fmt.Println("TEMP PASSWORD:", tempPassword)
+
 	m := gomail.NewMessage()
+
+	fmt.Println("Creating mail message...")
+
 	m.SetHeader("From", from)
 	m.SetHeader("To", userEmail)
 	m.SetHeader("Subject", "Welcome")
@@ -83,7 +95,6 @@ func SendWelcomeEmail(userEmail, tempPassword string) error {
 				<p><strong>Temporary Password:</strong> <code style="color: #d63384;">%s</code></p>
 			</div>
 			<p>For security, you will be required to change this password upon your first login.</p>
-			
 		</div>
 	</body>
 	</html>
@@ -91,7 +102,21 @@ func SendWelcomeEmail(userEmail, tempPassword string) error {
 
 	m.SetBody("text/html", body)
 
+	fmt.Println("Creating SMTP dialer...")
+
 	d := gomail.NewDialer(smtpHost, smtpPort, from, pass)
 
-	return d.DialAndSend(m)
+	fmt.Println("Attempting to send email...")
+
+	err := d.DialAndSend(m)
+
+	if err != nil {
+		fmt.Println("EMAIL SEND ERROR:", err)
+		return err
+	}
+
+	fmt.Println("EMAIL SENT SUCCESSFULLY")
+	fmt.Println("========== SENDWELCOMEEMAIL END ==========")
+
+	return nil
 }
