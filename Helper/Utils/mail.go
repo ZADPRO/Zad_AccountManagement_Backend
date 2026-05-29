@@ -17,7 +17,7 @@ func SendPasswordResetEmail(userEmail, resetToken string) error {
 	// Default to 587 if PORT is not set or invalid
 	smtpPort, _ := strconv.Atoi(os.Getenv("SMTP_PORT"))
 	if smtpPort == 0 {
-		smtpPort = 587
+		smtpPort = 465
 	}
 
 	resetLink := fmt.Sprintf("http://localhost:3000/reset-password/%s", resetToken)
@@ -69,7 +69,7 @@ func SendWelcomeEmail(userEmail, tempPassword string) error {
 	smtpPort, _ := strconv.Atoi(os.Getenv("SMTP_PORT"))
 
 	if smtpPort == 0 {
-		smtpPort = 587
+		smtpPort = 465
 	}
 
 	fmt.Println("SMTP PORT:", smtpPort)
@@ -105,6 +105,7 @@ func SendWelcomeEmail(userEmail, tempPassword string) error {
 	fmt.Println("Creating SMTP dialer...")
 
 	d := gomail.NewDialer(smtpHost, smtpPort, from, pass)
+	d.SSL = true
 
 	fmt.Println("Attempting to send email...")
 
