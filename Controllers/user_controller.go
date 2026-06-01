@@ -9,6 +9,7 @@ import (
 	"invoice-backend/Services"
 	"net/http"
 	"strconv"
+	"fmt"
 
 	"github.com/gin-gonic/gin"
 )
@@ -39,7 +40,7 @@ func CreateUser(db *sql.DB) gin.HandlerFunc {
 		json.Unmarshal(jsonBytes, &req)
 
 		// 2. Logic: The service layer adds the user to the DB and triggers a Welcome Email
-		id, err := Services.AddNewUser(db, req)
+		id, email, tempPassword, err := Services.AddNewUser(db, req)
 		if err != nil {
 		// Handle specific business logic error: Email duplication
 		if err.Error() == "email already exists" {
@@ -57,11 +58,17 @@ func CreateUser(db *sql.DB) gin.HandlerFunc {
     return
 }
 
+fmt.Println("EMAIL:", email)
+fmt.Println("TEMP PASSWORD:", tempPassword)
+
 		// 3. Return success with the new UserID
-		resp := hashapi.Encrypt(dto.CreateUserResponse{
-			BaseResponse: dto.BaseResponse{Status: true, Message: "User created successfully"},
-			UserID:       id,
-		}, true, token)
+		resp := hashapi.Encrypt(gin.H{
+	"status": true,
+	"message": "User created successfully",
+	"userId": id,
+	"email": email,
+	"tempPassword": tempPassword,
+}, true, token)
 		c.JSON(http.StatusCreated, resp)
 	}
 }

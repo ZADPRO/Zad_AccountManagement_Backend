@@ -16,11 +16,11 @@ import (
 )
 
 // AddNewUser handles: Temp Password -> Hashing -> Static Encryption -> DB Insert
-func AddNewUser(db *sql.DB, req dto.CreateUserRequest) (int, error) {
+func AddNewUser(db *sql.DB, req dto.CreateUserRequest) (int, string, string, error) {
     // 1. Generate temp password
     b := make([]byte, 4)
     if _, err := rand.Read(b); err != nil {
-        return 0, fmt.Errorf("failed to generate random bytes: %w", err)
+        return 0, "", "", fmt.Errorf("failed to generate random bytes: %w", err)
     }
     tempPassword := hex.EncodeToString(b)
     fmt.Printf("DEBUG: tempPassword=%q for %q\n", tempPassword, req.Email)
@@ -28,12 +28,12 @@ func AddNewUser(db *sql.DB, req dto.CreateUserRequest) (int, error) {
     // 2. Hash password
     hashedPassword, err := bcrypt.GenerateFromPassword([]byte(tempPassword), 14)
     if err != nil {
-        return 0, fmt.Errorf("failed to hash password: %w", err)
+        return 0, "", "", fmt.Errorf("failed to hash password: %w", err)
     }
 	encryptedEmail, err := Utils.EncryptForDB(req.Email)
-if err != nil {
-    return 0, fmt.Errorf("failed to encrypt email: %w", err)
-}
+	if err != nil {
+    	return 0, "", "", fmt.Errorf("failed to encrypt email: %w", err)
+	}
    
 	
     // 4. Insert
@@ -50,30 +50,22 @@ if err != nil {
     encryptedEmail,
     req.Email,
     true,
-).Scan(&newID)
+	).Scan(&newID)
 
     if err != nil {
    
 
     if pqErr, ok := err.(*pq.Error); ok {
         if pqErr.Code == "23505" {
-            return 0, fmt.Errorf("email already exists")
+            return 0, "", "", fmt.Errorf("email already exists")
         }
     }
 
-    return 0, fmt.Errorf("database insert failed: %w", err)
+    return 0, "", "", fmt.Errorf("database insert failed: %w", err)
 }
 
-   
 
-    // 5. Send welcome email — only once, log error but don't fail
-    if err := Utils.SendWelcomeEmail(req.Email, tempPassword); err != nil {
-        fmt.Printf("DEBUG SendWelcomeEmail error: %v\n", err)
-    } else {
-        fmt.Printf("DEBUG SendWelcomeEmail: sent successfully\n")
-    }
-
-    return newID, nil
+    return newID, req.Email, tempPassword, nil
 } 
 
 // UpdateUser handles: Static Encryption -> DB Update
