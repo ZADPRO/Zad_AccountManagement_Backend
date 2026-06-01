@@ -1,3 +1,7 @@
+// NOTE:
+// Welcome email delivery is currently handled by EmailJS from the frontend.
+// SMTP-based SendWelcomeEmail() is retained as backup/reference.
+
 package Utils
 
 import (
@@ -53,7 +57,9 @@ func SendPasswordResetEmail(userEmail, resetToken string) error {
 	return d.DialAndSend(m)
 }
 
-// SendWelcomeEmail sends the temporary login credentials to new users
+// DEPRECATED:
+// Welcome emails are currently sent using EmailJS from the frontend.
+// This SMTP implementation is retained as backup and should not be removed.
 // SendWelcomeEmail sends the temporary login credentials to new users
 func SendWelcomeEmail(userEmail, tempPassword string) error {
 
