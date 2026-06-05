@@ -88,6 +88,22 @@ func SetupRoutes(r *gin.Engine, db *sql.DB) {
 				signatureRoutes.PUT("/:id", Controller.UpdateSignatureAuthority)
 				signatureRoutes.DELETE("/:id", Controller.DeleteSignatureAuthority)
 			}
+
+			currencyRoutes := protected.Group("/currencies")
+			{
+				currencyRoutes.GET("", Controller.GetCurrencies)
+				currencyRoutes.POST("", Controller.CreateCurrency)
+				currencyRoutes.PUT("/:id", Controller.UpdateCurrency)
+				currencyRoutes.DELETE("/:id", Controller.DeleteCurrency)
+			}
+
+			companyProfileRoutes := protected.Group("/company-profiles")
+			{
+				companyProfileRoutes.GET("", Controller.GetCompanyProfiles)
+				companyProfileRoutes.POST("", Controller.CreateCompanyProfile)
+				companyProfileRoutes.PUT("/:id", Controller.UpdateCompanyProfile)
+				companyProfileRoutes.DELETE("/:id", Controller.DeleteCompanyProfile)
+			}
 			// Dashboard Stats
 			protected.GET("/dashboard/summary", Controller.GetDashboardStats(db))
 		}

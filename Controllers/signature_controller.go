@@ -27,7 +27,7 @@ func GetSignatureAuthorities(c *gin.Context) {
 		return
 	}
 
-	fmt.Println(authorities)
+	//fmt.Println(authorities)
 
 	c.JSON(http.StatusOK, authorities)
 }
@@ -188,6 +188,7 @@ func DeleteSignatureAuthority(c *gin.Context) {
 		return
 	}
 
+	
 	c.JSON(http.StatusOK,
 		hashapi.Encrypt(gin.H{
 			"status": true,
