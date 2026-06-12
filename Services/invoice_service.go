@@ -7,11 +7,42 @@ import (
     "invoice-backend/Helper/Utils" 
 	"invoice-backend/Query"
 	"time"
-     "encoding/json"
+    "encoding/json"
+    
+    "strings"
 )
 
 // CreateFullInvoice handles the business logic and DB transaction
 func CreateFullInvoice(db *sql.DB, req dto.CreateInvoiceRequest) (int, error) {
+
+    //fmt.Println("COMPANY PROFILE ID =", req.CompanyProfileID)
+
+    if req.IsSaveDraft {
+        req.InvoiceNumber = ""
+    } else {
+
+        invoiceDate, err := time.Parse(
+            "2006-01-02",
+            req.InvoiceDate,
+        )
+
+        if err != nil {
+            return 0, err
+        }
+
+        invoiceNumber, err := GenerateInvoiceNumber(
+            db,
+            invoiceDate,
+        )
+
+        if err != nil {
+            return 0, err
+        }
+
+        req.InvoiceNumber = invoiceNumber
+    }
+
+   
 
     
 
@@ -37,11 +68,14 @@ func CreateFullInvoice(db *sql.DB, req dto.CreateInvoiceRequest) (int, error) {
     // ✅ Insert invoice header
     var newInvoiceID int
 
-    fmt.Println("TAX TYPE:", req.TaxType)
+    //fmt.Println("TAX TYPE:", req.TaxType)
+    //fmt.Println("SAVING TO DB =", req.IsSaveDraft)
+
     err = tx.QueryRow(
         Query.InsertInvoiceHeaderQuery,
         req.InvoiceNumber,
         req.ClientID,
+        req.CompanyProfileID,
         req.InvoiceDate,
         req.GrandTotal,
         req.PaymentStatus,
@@ -55,6 +89,7 @@ func CreateFullInvoice(db *sql.DB, req dto.CreateInvoiceRequest) (int, error) {
         req.TaxType,
         req.TaxAmount,
         req.TdsAmount,
+        req.IsSaveDraft,
     ).Scan(&newInvoiceID)
 
     if err != nil {
@@ -73,6 +108,7 @@ func CreateFullInvoice(db *sql.DB, req dto.CreateInvoiceRequest) (int, error) {
             Query.InsertInvoiceItemQuery,
             newInvoiceID,
             item.Description,
+            item.SACCode,
             item.Quantity,
             item.UnitPrice,
             item.LineTotal,
@@ -94,23 +130,136 @@ func CreateFullInvoice(db *sql.DB, req dto.CreateInvoiceRequest) (int, error) {
     return newInvoiceID, nil
 }
 
+func UpdateInvoice(
+    db *sql.DB,
+    invoiceID int,
+    req dto.CreateInvoiceRequest,
+) error {
+
+
+    // Generate invoice number when draft becomes invoice
+    if !req.IsSaveDraft {
+
+    var existingInvoiceNo string
+
+    err := db.QueryRow(
+        `SELECT invoicenumber
+         FROM invoices
+         WHERE invoiceid = $1`,
+        invoiceID,
+    ).Scan(&existingInvoiceNo)
+
+    if err != nil {
+        return err
+    }
+
+    if strings.TrimSpace(existingInvoiceNo) == "" {
+
+        invoiceDate, err := time.Parse(
+            "2006-01-02",
+            req.InvoiceDate,
+        )
+
+        if err != nil {
+            return err
+        }
+
+        req.InvoiceNumber, err =
+            GenerateInvoiceNumber(
+                db,
+                invoiceDate,
+            )
+
+            
+
+        if err != nil {
+            return err
+        }
+
+    } else {
+
+        req.InvoiceNumber = existingInvoiceNo
+    }
+}
+
+    customJSON, err := json.Marshal(req.CustomValues)
+    if err != nil {
+        return err
+    }
+
+
+   _, err = db.Exec(
+    Query.UpdateInvoiceQuery,
+
+    req.InvoiceNumber,      // $1
+    req.ClientID,           // $2
+    req.CompanyProfileID,   // $3
+    req.InvoiceDate,        // $4
+    req.GrandTotal,         // $5
+    req.PaymentStatus,      // $6
+    req.UpdatedBy,          // $7
+    string(customJSON),     // $8
+    req.InvoiceDueDate,     // $9
+    req.Currency,           // $10
+    req.BankID,             // $11
+    req.SignatureAuthorityID,// $12
+    req.InvoiceType,        // $13
+    req.TaxType,            // $14
+    req.TaxAmount,          // $15
+    req.TdsAmount,          // $16
+    req.IsSaveDraft,        // $17
+
+    invoiceID,              // $18
+)
+
+    
+   if err != nil {
+    return err
+}
+
+
+return nil
+}
+
 func GetInvoiceByID(db *sql.DB, invoiceID int) (*dto.InvoiceResponse, error) {
 
     var inv dto.InvoiceResponse
     var clientID int
     var customJSON []byte 
+    var companyProfileID sql.NullInt64
     
     // 1. Declare Nullable variables for ALL potentially missing fields
     var (
         bankID                                                        sql.NullInt64
-        sigAuthID                                                     sql.NullInt64
-        sigName, sigRole, sigContact, sigEmail                        sql.NullString
-        bankName, accNum, ifsc, bankAddr, logoUrl, accType, swiftCode sql.NullString
+        sigAuthID sql.NullInt64
+
+        sigName sql.NullString
+        sigRole sql.NullString
+        sigContact sql.NullString
+        sigEmail sql.NullString
+        sigURL sql.NullString                                                    
+         bankName, accNum, ifsc, bankAddr, logoUrl, accType, swiftCode sql.NullString
         
         // Fields that might be NULL in older invoices
         invDueDate, curr, invType, txType                             sql.NullString
         txAmount, tdsAmt                                              sql.NullFloat64
     )
+
+    var (
+    companyName sql.NullString
+    address1 sql.NullString
+    address2 sql.NullString
+    city sql.NullString
+    state sql.NullString
+    country sql.NullString
+    pincode sql.NullString
+    gst sql.NullString
+    companyEmail sql.NullString
+    companyPhone sql.NullString
+    website sql.NullString
+        companyLogo sql.NullString
+
+)
 
     // 2. Fetch invoice header safely
     err := db.QueryRow(Query.GetInvoiceByIDQuery, invoiceID).Scan(
@@ -120,6 +269,7 @@ func GetInvoiceByID(db *sql.DB, invoiceID int) (*dto.InvoiceResponse, error) {
         &inv.GrandTotal,
         &inv.PaymentStatus,
         &clientID,
+        &companyProfileID,
         &customJSON,
         &invDueDate,  // Mapped to i.invoiceduedate
         &curr,        // Mapped to i.currency
@@ -133,6 +283,19 @@ func GetInvoiceByID(db *sql.DB, invoiceID int) (*dto.InvoiceResponse, error) {
         &sigRole,
         &sigContact,
         &sigEmail,
+        &sigURL,
+       &companyName,
+&address1,
+&address2,
+&city,
+&state,
+&country,
+&pincode,
+&gst,
+&companyEmail,
+&companyPhone,
+&website,
+&companyLogo,
         &bankName,
         &accNum,
         &ifsc,
@@ -142,7 +305,7 @@ func GetInvoiceByID(db *sql.DB, invoiceID int) (*dto.InvoiceResponse, error) {
         &swiftCode,
     )
 
-    // 🚨 IF IT FAILS HERE, CHECK YOUR TERMINAL
+    //  IF IT FAILS HERE, CHECK YOUR TERMINAL
     if err != nil {
         fmt.Println("🚨 DATABASE HEADER SCAN ERROR:", err) 
         return nil, fmt.Errorf("invoice not found or scan error: %w", err)
@@ -156,12 +319,14 @@ func GetInvoiceByID(db *sql.DB, invoiceID int) (*dto.InvoiceResponse, error) {
     if txAmount.Valid { inv.TaxAmount = txAmount.Float64 }
     if tdsAmt.Valid { inv.TdsAmount = tdsAmt.Float64 }
     if bankID.Valid { inv.BankID = int(bankID.Int64) }
+    if companyProfileID.Valid { inv.CompanyProfileID = int(companyProfileID.Int64)}
     
     if sigAuthID.Valid { inv.SignatureAuthorityID = int(sigAuthID.Int64) }
     if sigName.Valid { inv.SignatureAuthorityName = sigName.String }
     if sigRole.Valid { inv.SignatureAuthorityRole = sigRole.String }
     if sigContact.Valid { inv.SignatureContactNumber = sigContact.String }
     if sigEmail.Valid { inv.SignatureEmail = sigEmail.String }
+    if sigURL.Valid {inv.SignatureURL = sigURL.String}
 
     if bankName.Valid { inv.InvoiceBankName = bankName.String }
     if accNum.Valid { inv.InvoiceAccountNumber = accNum.String }
@@ -170,6 +335,58 @@ func GetInvoiceByID(db *sql.DB, invoiceID int) (*dto.InvoiceResponse, error) {
     if logoUrl.Valid { inv.InvoiceQRCodeURL = logoUrl.String }
     if accType.Valid { inv.InvoiceAccountType = accType.String }
     if swiftCode.Valid { inv.InvoiceSwiftCode = swiftCode.String }
+    if companyName.Valid {
+    inv.CompanyName = companyName.String
+}
+
+
+if address1.Valid {
+    inv.AddressLine1 = address1.String
+}
+
+if address2.Valid {
+    inv.AddressLine2 = address2.String
+}
+
+if city.Valid {
+    inv.City = city.String
+}
+
+if state.Valid {
+    inv.State = state.String
+}
+
+if country.Valid {
+    inv.Country = country.String
+}
+
+if pincode.Valid {
+    inv.Pincode = pincode.String
+}
+
+if gst.Valid {
+    inv.GSTNumber = gst.String
+}
+
+if companyEmail.Valid {
+    inv.CompanyEmail = companyEmail.String
+}
+
+if companyPhone.Valid {
+    inv.CompanyPhone = companyPhone.String
+}
+
+if website.Valid {
+    inv.Website = website.String
+}
+
+if companyLogo.Valid {
+    inv.CompanyLogoURL = companyLogo.String
+}
+
+//fmt.Println("COMPANY NAME =", inv.CompanyName)
+//fmt.Println("ADDRESS 1 =", inv.AddressLine1)
+//fmt.Println("CITY =", inv.City)
 
     // 4. Decrypt Bank Details
     if inv.InvoiceAccountNumber != "" {
@@ -212,7 +429,7 @@ func GetInvoiceByID(db *sql.DB, invoiceID int) (*dto.InvoiceResponse, error) {
     var gstNumber sql.NullString
     var pan sql.NullString
     var stateName sql.NullString
-    var email, primaryNum, registeredAddr, country, billingAddr, gstStatus sql.NullString // Just in case
+    var email, primaryNum, registeredAddr, clientCountry, billingAddr sql.NullString // Just in case
     
     err = db.QueryRow(Query.GetClientByIDQuery, clientID).Scan(
         &inv.Client.ClientID,
@@ -227,7 +444,7 @@ func GetInvoiceByID(db *sql.DB, invoiceID int) (*dto.InvoiceResponse, error) {
         &email,            // Was &inv.Client.Email
         &primaryNum,       // Was &inv.Client.PrimaryNumber
         &registeredAddr,   // Was &inv.Client.Address
-        &country,          // Was &inv.Client.CountryName
+        &clientCountry,    // Was &inv.Client.CountryName
         &stateName,
         &zip,
         &billingAddr,      // Was &inv.Client.BillingAddress
@@ -237,7 +454,7 @@ func GetInvoiceByID(db *sql.DB, invoiceID int) (*dto.InvoiceResponse, error) {
         &gstNumber,
         &pan,
         &inv.Client.IsExport,
-        &gstStatus,        // Was &inv.Client.GSTStatus
+      
         &inv.Client.BillingCountry,
         &inv.Client.BillingState,
     )
@@ -252,9 +469,9 @@ func GetInvoiceByID(db *sql.DB, invoiceID int) (*dto.InvoiceResponse, error) {
     if email.Valid { inv.Client.Email = email.String }
     if primaryNum.Valid { inv.Client.PrimaryNumber = primaryNum.String }
     if registeredAddr.Valid { inv.Client.Address = registeredAddr.String }
-    if country.Valid { inv.Client.CountryName = country.String }
+    if clientCountry.Valid { inv.Client.CountryName = clientCountry.String }
     if billingAddr.Valid { inv.Client.BillingAddress = billingAddr.String }
-    if gstStatus.Valid { inv.Client.GSTStatus = gstStatus.String }
+   
 
     if zip.Valid { inv.Client.ZIP = int(zip.Int64) }
     if gstNumber.Valid { inv.Client.GSTNumber = gstNumber.String }
@@ -291,6 +508,7 @@ func GetInvoiceByID(db *sql.DB, invoiceID int) (*dto.InvoiceResponse, error) {
         err := rows.Scan(
             &item.ItemID,
             &item.Description,
+            &item.SACCode,
             &item.Quantity,
             &item.UnitPrice,
             &item.LineTotal,
@@ -312,6 +530,8 @@ func GetInvoiceByID(db *sql.DB, invoiceID int) (*dto.InvoiceResponse, error) {
 
         inv.Items = append(inv.Items, item)
     }
+
+    fmt.Printf("ITEMS = %+v\n", inv.Items)
 
     return &inv, nil
 }
@@ -337,3 +557,4 @@ func DeleteInvoice(db *sql.DB, invoiceID int, adminID int) error {
 
 	return nil
 }
+

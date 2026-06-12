@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"github.com/gin-gonic/gin"
 	"invoice-backend/Services" 
-	"fmt" 
+	 
 	"encoding/json"
 
 )
@@ -44,8 +44,8 @@ func CreateInvoice(db *sql.DB) gin.HandlerFunc {
 		jsonBytes, _ := json.Marshal(decrypted)
 		if err := json.Unmarshal(jsonBytes, &req); err != nil {
 
-	fmt.Println("UNMARSHAL ERROR:", err)
-	fmt.Println("DECRYPTED DATA:", string(jsonBytes))
+		//fmt.Println("UNMARSHAL ERROR:", err)
+		//fmt.Println("DECRYPTED DATA:", string(jsonBytes))
 
 	c.JSON(http.StatusBadRequest, hashapi.Encrypt(gin.H{
 		"status": false,
@@ -56,8 +56,10 @@ func CreateInvoice(db *sql.DB) gin.HandlerFunc {
 }
 
 		// ✅ DEBUG (now this will work correctly)
-		fmt.Println("RAW REQ:", req)
-		fmt.Println("DATE:", req.InvoiceDate)
+		//fmt.Println("RAW REQ:", req)
+		//fmt.Printf("REQ: %+v\n", req)
+		//fmt.Println("IS SAVE DRAFT =", req.IsSaveDraft)
+		//fmt.Println("DATE:", req.InvoiceDate)
 
 		// 4. Call service
 		newInvoiceID, err := Services.CreateFullInvoice(db, req)
@@ -80,6 +82,85 @@ func CreateInvoice(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
+func UpdateInvoice(db *sql.DB) gin.HandlerFunc {
+    return func(c *gin.Context) {
+
+        invoiceID, err := strconv.Atoi(
+            c.Param("id"),
+        )
+
+        if err != nil {
+            c.JSON(
+                http.StatusBadRequest,
+                gin.H{"error": "invalid invoice id"},
+            )
+            return
+        }
+
+        token := getToken(c)
+
+var packet dto.EncryptedPacket
+
+if err := c.ShouldBindJSON(&packet); err != nil {
+    c.JSON(http.StatusBadRequest, gin.H{
+        "error": "Invalid Packet",
+    })
+    return
+}
+
+decrypted, err := hashapi.Decrypt(
+    packet.Data,
+    token,
+)
+
+if err != nil {
+    c.JSON(http.StatusUnauthorized, gin.H{
+        "error": "Decryption failed",
+    })
+    return
+}
+
+var req dto.CreateInvoiceRequest
+
+jsonBytes, _ := json.Marshal(decrypted)
+
+if err := json.Unmarshal(
+    jsonBytes,
+    &req,
+); err != nil {
+
+    c.JSON(http.StatusBadRequest, gin.H{
+        "error": err.Error(),
+    })
+    return
+}
+
+
+        err = Services.UpdateInvoice(
+            db,
+            invoiceID,
+            req,
+        )
+
+		
+
+        if err != nil {
+            c.JSON(
+                http.StatusInternalServerError,
+                gin.H{"error": err.Error()},
+            )
+            return
+        }
+
+        c.JSON(
+            http.StatusOK,
+            gin.H{
+                "message": "invoice updated",
+            },
+        )
+    }
+}
+
 
 func GetInvoiceList(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -97,8 +178,10 @@ func GetInvoiceList(db *sql.DB) gin.HandlerFunc {
 			var id int
 			var invNum, clientName, date, status string
 			var total float64
+			var isSaveDraft bool
+			var invoiceType string
 
-			err := rows.Scan(&id, &invNum, &clientName, &date, &total, &status)
+			err := rows.Scan(&id, &invNum,&invoiceType, &clientName, &date, &total, &status,&isSaveDraft,)
 			if err != nil {
 				continue
 			}
@@ -110,6 +193,8 @@ func GetInvoiceList(db *sql.DB) gin.HandlerFunc {
 				"invoicedate":   date,
 				"grandtotal":    total,
 				"paymentstatus": status,
+				"issavedraft":   isSaveDraft,
+				"invoicetype":   invoiceType,
 			})
 		}
 

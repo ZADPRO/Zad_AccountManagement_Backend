@@ -10,7 +10,7 @@ type CreateClientRequest struct {
 	
 	SupplyTypeID  int    `json:"supplytypeid"`
 	ClientType    string `json:"clienttype"`
-	GSTStatus     string `json:"gststatus"`
+	
 	GSTNumber     string `json:"gstnumber"` 
 	PAN           string `json:"pan"`
 	IsExport      bool   `json:"isexport"`
@@ -56,7 +56,7 @@ type ClientFullResponse struct {
  // Tax fields
     GSTNumber     string  `json:"gstnumber"`
     PAN           string  `json:"pan"`
-    GSTStatus     string  `json:"gststatus"`
+    
     IsExport      bool    `json:"isexport"`
     TaxPercentage float64 `json:"tax_percentage"`
 
