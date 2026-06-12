@@ -158,6 +158,10 @@ if req.PAN != "" {
         billingStateID = req.BillingStateID
     }
 
+    fmt.Println("CLIENT ID =", clientID)
+fmt.Println("SUPPLY TYPE ID RECEIVED =", req.SupplyTypeID)
+fmt.Println("SUPPLY TYPE =", req.SupplyType)
+
     // 1. Update clientinformation
     _, err = tx.Exec(Query.UpdateClientInfoQuery,
         req.Name,          // $1  name
