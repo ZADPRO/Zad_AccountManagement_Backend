@@ -61,6 +61,8 @@ func SetupRoutes(r *gin.Engine, db *sql.DB) {
 				invoiceRoutes.POST("", Controller.CreateInvoice(db))
 				invoiceRoutes.GET("/:id", Controller.GetInvoiceByID(db))
 				invoiceRoutes.DELETE("/:id", Controller.DeleteInvoice(db))
+				fmt.Println("UPDATE ROUTE LOADED")
+				invoiceRoutes.PUT("/:id", Controller.UpdateInvoice(db))
 				
 			} 
 

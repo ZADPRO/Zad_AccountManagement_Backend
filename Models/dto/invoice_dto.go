@@ -5,6 +5,7 @@ type InvoiceItem struct {
 	ItemID      int     `json:"itemid,omitempty"`
 	InvoiceID   int     `json:"invoiceid,omitempty"`
 	Description string  `json:"description"`
+	SACCode     string  `json:"sacCode"`
 	Quantity    int     `json:"quantity"`
 	UnitPrice   float64 `json:"unitprice"`
 	LineTotal   float64 `json:"linetotal"`
@@ -19,6 +20,7 @@ type CustomFieldValue struct {
 type CreateInvoiceRequest struct {
 	InvoiceNumber string        `json:"invoicenumber"`
 	ClientID      int           `json:"clientid"`
+	CompanyProfileID int `json:"companyProfileId"`
 	InvoiceDate   string        `json:"invoicedate"` // YYYY-MM-DD
 	GrandTotal    float64       `json:"grandtotal"`
 	SignatureAuthorityID int `json:"signatureauthorityid"`
@@ -33,6 +35,7 @@ type CreateInvoiceRequest struct {
 	TaxType string `json:"taxtype"`
 	TaxAmount     float64     `json:"taxamount"`
 	TdsAmount     float64     `json:"tdsamount"`
+	IsSaveDraft bool `json:"isSaveDraft"`
 }
 type InvoiceResponse struct {
     InvoiceID     int                `json:"invoiceid"`
@@ -46,6 +49,25 @@ type InvoiceResponse struct {
 	InvoiceDueDate string             `json:"invoiceduedate"`
 	Currency       string             `json:"currency"` 
 	BankID      int    `json:"bankId"`
+	CompanyProfileID int    `json:"companyProfileId"`
+
+CompanyName  string `json:"companyName"`
+AddressLine1 string `json:"addressLine1"`
+AddressLine2 string `json:"addressLine2"`
+
+City         string `json:"city"`
+State        string `json:"state"`
+Country      string `json:"country"`
+Pincode      string `json:"pincode"`
+
+GSTNumber    string `json:"gstNumber"`
+
+CompanyEmail string `json:"companyEmail"`
+CompanyPhone string `json:"companyPhone"`
+Website      string `json:"website"`
+
+CompanyLogoURL string `json:"companyLogoUrl"`
+	SignatureURL string `json:"signatureUrl"`
 	SignatureAuthorityID   int    `json:"signatureAuthorityId"`
 	SignatureAuthorityName string `json:"signatureAuthorityName"`
 	SignatureAuthorityRole string `json:"signatureAuthorityRole"`
