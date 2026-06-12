@@ -49,7 +49,7 @@ type ClientDetailsResponse struct {
     GSTNumber          string `json:"gstNumber"`
     PAN                string `json:"pan"`
     IsExport           bool   `json:"isExport"`
-    GSTStatus          string `json:"gstStatus"`
+   
 
     BillingCountryName string `json:"billingCountryName"` // add
     BillingStateName   string `json:"billingStateName"`   // add

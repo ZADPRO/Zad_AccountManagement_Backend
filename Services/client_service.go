@@ -109,7 +109,7 @@ func CreateClient(db *sql.DB, req dto.CreateClientRequest, adminID int) (int, er
         req.BillingCountryID, // $7
         billingStateID,       // $8 ← nil when not India
         adminID,              // $9
-        req.GSTStatus,        // $10
+        
     )
 
     if err != nil {
@@ -179,7 +179,7 @@ if req.PAN != "" {
 
     // 2. Update clienttaxdetails
     _, err = tx.Exec(Query.UpdateClientTaxQuery,
-        req.GSTStatus,        // $1  gststatus
+        
         encryptedGST,         // $2  gstnumber
         encryptedPAN,         // $3  pan
         req.TaxPercentage,    // $4  taxpercentage
@@ -206,7 +206,7 @@ func GetClientByID(db *sql.DB, clientID int) (responses.ClientDetailsResponse, e
 	// Nullable fields
 	var email, mobileNumber, registeredAddress, countryName sql.NullString
     var stateName, billingAddress, gstNumber, pan sql.NullString
-    var billingCountryName, billingStateName, gstStatus sql.NullString
+    var billingCountryName, billingStateName sql.NullString
 
     var zip sql.NullInt64
     var billingStateID sql.NullInt64
@@ -235,7 +235,7 @@ func GetClientByID(db *sql.DB, clientID int) (responses.ClientDetailsResponse, e
 	&gstNumber,
 	&pan,
 	&client.IsExport,
-	&gstStatus,
+	
 	&billingCountryName,
 	&billingStateName,
 )
@@ -290,9 +290,7 @@ if pan.Valid {
 	client.PAN = pan.String
 }
 
-if gstStatus.Valid {
-	client.GSTStatus = gstStatus.String
-}
+
 
 if billingCountryName.Valid {
 	client.BillingCountryName = billingCountryName.String

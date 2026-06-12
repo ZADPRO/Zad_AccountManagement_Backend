@@ -7,7 +7,7 @@ type Client struct {
 	BusinessName  string `gorm:"column:businessname"`   
 	SupplyTypeID  int    `gorm:"column:supplytypeid"`
 	ClientType    string `gorm:"column:clienttype"`
-	GSTStatus     string `gorm:"column:gststatus"`
+	
 	GSTNumber     string `gorm:"column:gstnumber"`      
 	PAN           string `gorm:"column:pan"`            
 	IsExport      bool   `gorm:"column:isexport"`

@@ -36,17 +36,17 @@ const (
 	UpdateClientTaxQuery = `
     UPDATE clienttaxdetails 
     SET 
-        gststatus        = $1,
-        gstnumber        = $2,
-        pan              = $3,
-        taxpercentage    = $4,
-        isexport         = $5,
-        billingaddress   = $6,
-        billingcountryid = $7,
-        billingstateid   = $8,
-        updatedby        = $9,
+       
+        gstnumber        = $1,
+        pan              = $2,
+        taxpercentage    = $3,
+        isexport         = $4,
+        billingaddress   = $5,
+        billingcountryid = $6,
+        billingstateid   = $7,
+        updatedby        = $8,
         updatedat        = NOW()
-    WHERE clientid = $10;`
+    WHERE clientid = 10;`
 
 	DeleteClientQuery = `
     UPDATE clientinformation 
@@ -57,9 +57,9 @@ const (
     INSERT INTO clienttaxdetails (
         clientid, gstnumber, pan, taxpercentage, isexport,
         billingaddress, billingcountryid, billingstateid,
-        updatedby, updatedat, gststatus
+        updatedby, updatedat
     )
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), $10);`
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW());`
 
 GetClientByIDQuery = `
 SELECT 
@@ -87,7 +87,7 @@ SELECT
     COALESCE(t.gstnumber, ''),
     COALESCE(t.pan, ''),
     COALESCE(t.isexport, false),
-    COALESCE(t.gststatus, ''),
+    
 
     
     COALESCE(cn.countryname, ''),

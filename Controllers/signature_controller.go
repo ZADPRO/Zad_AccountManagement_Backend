@@ -27,7 +27,7 @@ func GetSignatureAuthorities(c *gin.Context) {
 		return
 	}
 
-	fmt.Println(authorities)
+	//fmt.Println(authorities)
 
 	c.JSON(http.StatusOK, authorities)
 }
@@ -77,7 +77,7 @@ func CreateSignatureAuthority(c *gin.Context) {
 
 	if err != nil {
 
-		fmt.Println("CREATE SIGNATURE ERROR:", err)
+		//fmt.Println("CREATE SIGNATURE ERROR:", err)
 
 		c.JSON(http.StatusInternalServerError,
 			hashapi.Encrypt(gin.H{
@@ -146,6 +146,8 @@ func UpdateSignatureAuthority(c *gin.Context) {
 	// 4. Update DB
 	err = query.UpdateSignatureAuthority(authority)
 
+	fmt.Printf("DEBUG: Received Authority Struct: %+v\n", authority)
+
 	if err != nil {
 
 		c.JSON(http.StatusInternalServerError,
@@ -188,6 +190,7 @@ func DeleteSignatureAuthority(c *gin.Context) {
 		return
 	}
 
+	
 	c.JSON(http.StatusOK,
 		hashapi.Encrypt(gin.H{
 			"status": true,
