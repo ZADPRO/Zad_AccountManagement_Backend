@@ -46,7 +46,7 @@ const (
         billingstateid   = $7,
         updatedby        = $8,
         updatedat        = NOW()
-    WHERE clientid = 10;`
+    WHERE clientid = $9;`
 
 	DeleteClientQuery = `
     UPDATE clientinformation 

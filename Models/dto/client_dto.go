@@ -9,7 +9,9 @@ type CreateClientRequest struct {
 	BusinessName  string `json:"businessName" binding:"required"`
 	
 	SupplyTypeID  int    `json:"supplytypeid"`
+	SupplyType   string `json:"supplytype"`
 	ClientType    string `json:"clienttype"`
+	
 	
 	GSTNumber     string `json:"gstnumber"` 
 	PAN           string `json:"pan"`
@@ -46,6 +48,10 @@ type ClientFullResponse struct {
     ClientCode   string  `json:"clientCode"`
     Name         string  `json:"name"`
     BusinessName string  `json:"businessName"`
+
+	SupplyTypeID int    `json:"supplytypeid"`
+    SupplyType   string `json:"supplytype"`
+	
 	ClientType    string `json:"clienttype"`
     Email        string  `json:"email"`
     PrimaryNumber string `json:"mobilenumber"`
