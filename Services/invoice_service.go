@@ -458,6 +458,18 @@ if companyLogo.Valid {
         &inv.Client.BillingCountry,
         &inv.Client.BillingState,
     )
+    inv.Client.SupplyTypeID = supplyTypeID
+
+    switch supplyTypeID {
+case 1:
+    inv.Client.SupplyType = "B2B"
+case 2:
+    inv.Client.SupplyType = "B2C"
+case 3:
+    inv.Client.SupplyType = "C2C"
+default:
+    inv.Client.SupplyType = "-"
+}
     
     //  IF IT FAILS HERE, CHECK YOUR TERMINAL
     if err != nil {
@@ -531,7 +543,9 @@ if companyLogo.Valid {
         inv.Items = append(inv.Items, item)
     }
 
-    fmt.Printf("ITEMS = %+v\n", inv.Items)
+    //fmt.Printf("ITEMS = %+v\n", inv.Items)
+    fmt.Println("SUPPLY TYPE ID =", supplyTypeID)
+fmt.Println("SUPPLY TYPE =", inv.Client.SupplyType)
 
     return &inv, nil
 }
