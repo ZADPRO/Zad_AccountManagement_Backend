@@ -217,6 +217,44 @@ func UpdateInvoice(
     return err
 }
 
+// Delete existing invoice items
+_, err = db.Exec(
+    `DELETE FROM invoiceitems
+     WHERE invoiceid = $1`,
+    invoiceID,
+)
+
+if err != nil {
+    return err
+}
+
+// Reinsert all items
+for _, item := range req.Items {
+
+    itemCustomJSON, err := json.Marshal(
+        item.CustomFieldValues,
+    )
+
+    if err != nil {
+        return err
+    }
+
+    _, err = db.Exec(
+        Query.InsertInvoiceItemQuery,
+        invoiceID,
+        item.Description,
+        item.SACCode,
+        item.Quantity,
+        item.UnitPrice,
+        item.LineTotal,
+        req.UpdatedBy,
+        string(itemCustomJSON),
+    )
+
+    if err != nil {
+        return err
+    }
+}
 
 return nil
 }
@@ -544,8 +582,8 @@ default:
     }
 
     //fmt.Printf("ITEMS = %+v\n", inv.Items)
-    fmt.Println("SUPPLY TYPE ID =", supplyTypeID)
-fmt.Println("SUPPLY TYPE =", inv.Client.SupplyType)
+   // fmt.Println("SUPPLY TYPE ID =", supplyTypeID)
+// fmt.Println("SUPPLY TYPE =", inv.Client.SupplyType)
 
     return &inv, nil
 }
